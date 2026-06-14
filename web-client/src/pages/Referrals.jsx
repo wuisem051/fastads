@@ -1,0 +1,169 @@
+import React from 'react';
+import { Users, Share2, Copy, Layers, BarChart2, ExternalLink } from 'lucide-react';
+
+const card = {
+    background: '#fff',
+    borderRadius: '2rem',
+    padding: '2rem',
+    border: '1px solid #e6e9ed',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+};
+const tableHeadCell = {
+    padding: '0 2rem 1.25rem 2rem',
+    fontSize: '10px', fontWeight: 900,
+    textTransform: 'uppercase', letterSpacing: '0.08em',
+    color: 'var(--text-dim)', fontFamily: 'inherit',
+};
+const tableCell = { padding: '1.25rem 2rem' };
+
+export default function Referrals() {
+    const levels = [
+        { level: 1, count: 38, earn: '10%' },
+        { level: 2, count: 9, earn: '10%' },
+        { level: 3, count: 1, earn: '10%' },
+        { level: 4, count: 1, earn: '10%' },
+        { level: 5, count: 0, earn: '10%' },
+    ];
+    const referralList = [
+        { name: 'tengodinero', level: 1, lastLogin: 'Hace 2h', joinDate: '15 Jun 2026', earned: '0.0505 USD' },
+        { name: 'user_alpha', level: 1, lastLogin: 'Hace 5h', joinDate: '14 Jun 2026', earned: '0.0120 USD' },
+        { name: 'crypto_king', level: 2, lastLogin: 'Ayer', joinDate: '10 Jun 2026', earned: '0.0045 USD' },
+    ];
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem' }}>Programa de Afiliados</h1>
+                    <p style={{ color: 'var(--text-dim)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        Expande tu red y maximiza tus ingresos pasivos.
+                    </p>
+                </div>
+                <div style={{ ...card, padding: '1rem 1.5rem', borderRadius: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div>
+                        <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '4px' }}>Total Red</p>
+                        <p className="font-digital" style={{ color: 'var(--accent-secondary)', fontSize: '1.25rem' }}>49</p>
+                    </div>
+                    <div style={{ width: '3rem', height: '3rem', borderRadius: '0.875rem', background: 'rgba(0,160,233,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-secondary)' }}>
+                        <Users size={24} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Link + Benefits */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                <div style={{ ...card, borderRadius: '2.5rem', padding: '2.5rem', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: '-2rem', right: '-2rem', width: '8rem', height: '8rem', background: 'rgba(0,160,233,0.04)', borderRadius: '50%', filter: 'blur(20px)' }}></div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <Share2 size={22} color="var(--accent-secondary)" /> Enlace de Invitación
+                    </h3>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                        Comparte este enlace y recibe el 10% de las ganancias de tus invitados de por vida.
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <input readOnly value="https://adshare.com/u/Wuisem" style={{ flex: 1, background: '#f8f9fa', border: '1px solid #e6e9ed', borderRadius: '1rem', padding: '0.875rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, outline: 'none' }} />
+                        <button className="gradient-btn" style={{ padding: '0.875rem 1.25rem', borderRadius: '1rem', flexShrink: 0 }}>
+                            <Copy size={20} />
+                        </button>
+                    </div>
+                </div>
+
+                <div style={{ ...card, borderRadius: '2.5rem', padding: '2.5rem', background: 'rgba(76,209,55,0.02)', borderColor: 'rgba(76,209,55,0.1)' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: '2rem', color: 'var(--accent-primary)' }}>💎 Estrategia de Ganancias</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {[
+                            { n: '01', text: '<b>Nivel 1:</b> 10% de comisión directa de cada anuncio visto por tus invitados.' },
+                            { n: '02', text: '<b>Niveles 2-5:</b> Comisiones indirectas de toda tu estructura descendente.' },
+                        ].map(item => (
+                            <div key={item.n} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                                <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: 'rgba(76,209,55,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '10px', color: 'var(--accent-primary)', flexShrink: 0 }}>{item.n}</div>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: item.text }} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Level Structure */}
+            <div style={{ ...card, borderRadius: '2.5rem', padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f0f2f5', background: '#fafbfc', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Layers size={22} color="var(--accent-secondary)" />
+                    <h3 style={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', fontSize: '0.95rem' }}>Estructura de Red</h3>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                <th style={tableHeadCell}>Nivel</th>
+                                <th style={tableHeadCell}>Usuarios</th>
+                                <th style={tableHeadCell}>Comisión</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {levels.map(item => (
+                                <tr key={item.level} style={{ borderBottom: '1px solid #f9fafb', transition: 'background 0.2s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <td style={{ ...tableCell, fontWeight: 900, fontSize: '1rem' }}>Nivel {item.level}</td>
+                                    <td style={tableCell}><span className="font-digital" style={{ color: 'var(--accent-secondary)', fontSize: '1.1rem' }}>{item.count}</span></td>
+                                    <td style={tableCell}>
+                                        <span style={{ padding: '4px 12px', background: 'rgba(76,209,55,0.06)', color: 'var(--accent-primary)', borderRadius: '0.75rem', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{item.earn} GANANCIA</span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Referral List */}
+            <div style={{ ...card, borderRadius: '3rem', padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f0f2f5', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <BarChart2 size={22} color="var(--accent-secondary)" />
+                        <h3 style={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', fontSize: '0.95rem' }}>Lista de Invitados</h3>
+                    </div>
+                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '10px', fontWeight: 900, color: 'var(--accent-secondary)', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        Exportar <ExternalLink size={14} />
+                    </button>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                {['Invitado', 'Nivel', 'Último Acceso', 'Registro', 'Tu Beneficio'].map(h => (
+                                    <th key={h} style={tableHeadCell}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {referralList.map((user, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid #f9fafb', transition: 'background 0.2s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <td style={tableCell}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                                            <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.875rem', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                                                {user.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span style={{ fontWeight: 900 }}>{user.name}</span>
+                                        </div>
+                                    </td>
+                                    <td style={tableCell}><span className="font-digital" style={{ fontSize: '1rem' }}>{user.level}</span></td>
+                                    <td style={{ ...tableCell, color: 'var(--text-dim)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{user.lastLogin}</td>
+                                    <td style={{ ...tableCell, color: 'var(--text-dim)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{user.joinDate}</td>
+                                    <td style={{ ...tableCell, textAlign: 'right' }}>
+                                        <span style={{ fontFamily: 'monospace', fontWeight: 900, color: 'var(--accent-primary)', fontSize: '1rem', letterSpacing: '1px' }}>+{user.earned}</span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}

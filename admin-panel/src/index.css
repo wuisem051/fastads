@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ============================================
+   ADMIN PANEL - TeaserFast Institutional Palette
+   ============================================ */
+:root {
+  --bg-sidebar: #222d32;
+  --bg-main: #f4f6f7;
+  --bg-card: #ffffff;
+
+  --accent-primary: #4cd137;
+  --accent-secondary: #00a0e9;
+  --accent-gradient: linear-gradient(135deg, #00a0e9 0%, #4cd137 100%);
+
+  --text-primary: #333333;
+  --text-secondary: #5d6d7e;
+  --text-dim: #7f8c8d;
+
+  --border-color: #e6e9ed;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* Digital font for counters */
+.font-digital {
+  font-family: 'Courier New', Courier, monospace;
+  background: #0f1117;
+  color: var(--accent-primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  display: inline-block;
+  line-height: 1.4;
+}
+
+/* Premium card */
+.glass {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+.gradient-btn {
+  background: var(--accent-gradient);
+  color: white;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gradient-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 160, 233, 0.25);
+}
+
+/* Layout Utilities (fallback) */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.grid {
+  display: grid;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.p-12 {
+  padding: 3rem;
+}
+
+.text-dim {
+  color: var(--text-dim);
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
+.rounded-3xl {
+  border-radius: 1.5rem;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.m-0 {
+  margin: 0;
+}
+
+.hidden {
+  display: none;
+}

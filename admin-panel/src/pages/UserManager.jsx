@@ -1,0 +1,124 @@
+import React from 'react';
+import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2 } from 'lucide-react';
+
+const cardStyle = {
+    background: '#fff',
+    borderRadius: '2rem',
+    padding: '2rem',
+    border: '1px solid #e6e9ed',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+};
+
+const tableHeadCell = {
+    padding: '1.25rem 1.5rem',
+    fontSize: '10px', fontWeight: 900,
+    textTransform: 'uppercase', letterSpacing: '0.1em',
+    color: 'var(--text-dim)',
+    background: '#fafbfc',
+    borderBottom: '1px solid #f0f2f5',
+};
+
+export default function UserManager() {
+    const users = [
+        { id: 1, name: 'Wuisem', email: 'wuisem051@gmail.com', balance: '1,240.50', joined: '12 Jun 2026', status: 'Active', refers: 49 },
+        { id: 2, name: 'CryptoTrader', email: 'crypto@mail.com', balance: '45.20', joined: '10 Jun 2026', status: 'Active', refers: 12 },
+        { id: 3, name: 'BadActor', email: 'spam@bot.com', balance: '0.00', joined: '01 Jun 2026', status: 'Banned', refers: 0 },
+    ];
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>Gestión de Usuarios</h1>
+                    <p style={{ color: 'var(--text-dim)', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                        Supervisa, verifica y controla el acceso de los miembros de la red.
+                    </p>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.5rem', borderRadius: '1rem', background: '#f8f9fa', border: '1px solid #e6e9ed', color: 'var(--text-dim)' }}>
+                        <Users size={18} />
+                        <span style={{ fontSize: '11px', fontWeight: 900 }}>8,492 TOTALES</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* User List */}
+            <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', borderRadius: '2.5rem' }}>
+                <div style={{ padding: '2rem', display: 'flex', gap: '1.5rem', borderBottom: '1px solid #f0f2f5' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#f8f9fa', border: '1px solid #e6e9ed', padding: '0.75rem 1.25rem', borderRadius: '1rem', flex: 1 }}>
+                        <Search size={18} color="var(--text-dim)" />
+                        <input type="text" placeholder="Buscar por nombre, email o ID de usuario..." style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '0.875rem', width: '100%', fontWeight: 600 }} />
+                    </div>
+                    <button style={{ padding: '0 2rem', borderRadius: '1rem', background: '#fff', border: '1px solid #e6e9ed', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-dim)', cursor: 'pointer' }}>Exportar CSV</button>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                <th style={tableHeadCell}>Usuario / Email</th>
+                                <th style={tableHeadCell}>Balance & Actividad</th>
+                                <th style={tableHeadCell}>Fecha Registro</th>
+                                <th style={tableHeadCell}>Estado</th>
+                                <th style={{ ...tableHeadCell, textAlign: 'right' }}>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map((user, i) => (
+                                <tr key={user.id} style={{ borderBottom: i === users.length - 1 ? 'none' : '1px solid #f9fafb' }}>
+                                    <td style={{ padding: '1.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                            <div style={{
+                                                width: '3rem', height: '3rem', borderRadius: '14px',
+                                                background: user.status === 'Banned' ? '#fee2e2' : 'rgba(0,160,233,0.08)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: user.status === 'Banned' ? '#ef4444' : 'var(--accent-secondary)',
+                                                fontWeight: 900, fontSize: '1.25rem'
+                                            }}>{user.name.charAt(0)}</div>
+                                            <div>
+                                                <p style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>{user.name}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={12} /> {user.email}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '1.5rem' }}>
+                                        <p style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', marginBottom: '4px' }}><DollarSign size={16} /> {user.balance} USD</p>
+                                        <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.04em' }}>{user.refers} REFERIDOS ACTIVOS</p>
+                                    </td>
+                                    <td style={{ padding: '1.5rem' }}>
+                                        <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{user.joined}</p>
+                                    </td>
+                                    <td style={{ padding: '1.5rem' }}>
+                                        <span style={{
+                                            padding: '6px 14px', borderRadius: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em',
+                                            background: user.status === 'Active' ? '#f0fdf4' : '#fee2e2',
+                                            color: user.status === 'Active' ? '#16a34a' : '#ef4444',
+                                            border: `1px solid ${user.status === 'Active' ? '#bbf7d0' : '#fecaca'}`,
+                                            display: 'inline-flex', alignItems: 'center', gap: '6px'
+                                        }}>
+                                            {user.status === 'Active' ? <CheckCircle2 size={12} /> : <Ban size={12} />}
+                                            {user.status === 'Active' ? 'ACTIVO' : 'BANEADO'}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '1.5rem', textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} title="Historial">
+                                                <History size={18} />
+                                            </button>
+                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} title="Seguridad">
+                                                <Shield size={18} />
+                                            </button>
+                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: user.status === 'Banned' ? '1px solid #bbf7d0' : '1px solid #fecaca', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: user.status === 'Banned' ? '#16a34a' : '#ef4444' }} title={user.status === 'Banned' ? 'Restaurar' : 'Banear'}>
+                                                {user.status === 'Banned' ? <CheckCircle2 size={18} /> : <Ban size={18} />}
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}

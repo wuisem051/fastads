@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "AdShare - Gana Navegando",
+  "version": "1.0.0",
+  "description": "Visualiza anuncios seleccionados por AdShare y gana recompensas directamente en tu cuenta.",
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "notifications",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ]
+    }
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ]
+}
