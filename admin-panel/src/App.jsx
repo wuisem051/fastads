@@ -12,7 +12,7 @@ import AdminSettings from './pages/AdminSettings';
 
 export default function App() {
   return (
-    <BrowserRouter basename="/admin">
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
