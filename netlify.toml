@@ -1,7 +1,7 @@
 [build]
   base    = "web-client"
   command = "npm run build"
-  publish = "web-client/dist"
+  publish = "dist"
 
 [[redirects]]
   from   = "/*"
