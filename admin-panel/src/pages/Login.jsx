@@ -10,20 +10,32 @@ export default function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { login, logout } = useAuth();
+
+    const ADMIN_UID = 'MGJvxAVghfZZpaiz2ElhDq6dTXp1';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             setError('');
             setLoading(true);
-            await login(email, password);
+            const userCredential = await login(email, password);
+
+            if (userCredential.user.uid !== ADMIN_UID) {
+                await logout();
+                throw new Error('NO_ADMIN');
+            }
+
             // Wait a moment for context to update
             setTimeout(() => {
                 navigate('/dashboard');
             }, 500);
         } catch (err) {
-            setError('Credenciales incorrectas o no tienes acceso admin.');
+            if (err.message === 'NO_ADMIN') {
+                setError('Esta cuenta no tiene privilegios de administrador.');
+            } else {
+                setError('Credenciales incorrectas.');
+            }
         } finally {
             setLoading(false);
         }
