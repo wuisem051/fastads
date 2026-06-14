@@ -1,0 +1,70 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    updateProfile
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+
+const AuthContext = createContext(null);
+
+export const useAuth = () => {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+    return ctx;
+};
+
+export const AuthProvider = ({ children }) => {
+    const [currentUser, setCurrentUser] = useState(null);
+    const [userProfile, setUserProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const register = async (email, password, displayName) => {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(cred.user, { displayName });
+        // Create Firestore profile
+        await setDoc(doc(db, 'users', cred.user.uid), {
+            uid: cred.user.uid,
+            displayName,
+            email,
+            balance: 0,
+            totalEarnings: 0,
+            adsWatched: 0,
+            referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+            createdAt: serverTimestamp(),
+            role: 'user'
+        });
+        return cred;
+    };
+
+    const login = (email, password) =>
+        signInWithEmailAndPassword(auth, email, password);
+
+    const logout = () => signOut(auth);
+
+    const fetchProfile = async (uid) => {
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (snap.exists()) setUserProfile(snap.data());
+    };
+
+    useEffect(() => {
+        const unsub = onAuthStateChanged(auth, async (user) => {
+            setCurrentUser(user);
+            if (user) await fetchProfile(user.uid);
+            else setUserProfile(null);
+            setLoading(false);
+        });
+        return unsub;
+    }, []);
+
+    const value = { currentUser, userProfile, register, login, logout, fetchProfile };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
+};

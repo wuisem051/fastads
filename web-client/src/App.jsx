@@ -4,10 +4,7 @@ import {
   ArrowRight,
   Zap,
   Shield,
-  MousePointer2,
-  Clock,
   TrendingUp,
-  Globe,
   Monitor,
   Download,
   CheckCircle2,
@@ -15,6 +12,12 @@ import {
   Wallet
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// Auth
+import { useAuth } from './context/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 // Layouts & Pages
 import MainLayout from './layouts/MainLayout';
@@ -25,31 +28,39 @@ import Referrals from './pages/Referrals';
 import News from './pages/News';
 import Settings from './pages/Settings';
 
-const Navbar = () => (
-  <nav className="fixed top-0 left-0 right-0 z-50 py-6 border-b border-white/5 bg-primary">
-    <div className="container flex justify-between items-center" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center' }}>
-        <div className="gradient-btn p-2 rounded-xl flex items-center justify-center" style={{ width: '42px', height: '42px' }}>
-          <Zap size={24} fill="currentColor" />
+const Navbar = () => {
+  const { currentUser, logout } = useAuth();
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 py-6 border-b border-white/5 bg-primary">
+      <div className="container flex justify-between items-center" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="gradient-btn p-2 rounded-xl flex items-center justify-center" style={{ width: '42px', height: '42px' }}>
+            <Zap size={24} fill="currentColor" />
+          </div>
+          <span className="text-2xl font-black tracking-tighter">AD<span className="gradient-text">SHARE</span></span>
         </div>
-        <span className="text-2xl font-black tracking-tighter">AD<span className="gradient-text">SHARE</span></span>
+        <div className="hidden md:flex items-center gap-10" style={{ display: 'flex', gap: '2.5rem' }}>
+          <a href="#features" className="text-sm font-bold text-dim hover:text-white transition-all hover:tracking-widest" style={{ textDecoration: 'none' }}>FUNCIONALIDADES</a>
+          <a href="#how-it-works" className="text-sm font-bold text-dim hover:text-white transition-all hover:tracking-widest" style={{ textDecoration: 'none' }}>CÓMO FUNCIONA</a>
+          <a href="#stats" className="text-sm font-bold text-dim hover:text-white transition-all hover:tracking-widest" style={{ textDecoration: 'none' }}>ESTADÍSTICAS</a>
+        </div>
+        <div className="flex items-center gap-4" style={{ display: 'flex', alignItems: 'center' }}>
+          {currentUser ? (
+            <>
+              <a href="/dashboard" style={{ padding: '0.5rem 1.5rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>Mi Panel</a>
+              <button onClick={logout} style={{ padding: '0.5rem 1.5rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 700, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>Salir</button>
+            </>
+          ) : (
+            <>
+              <a href="/login" style={{ padding: '0.5rem 1.5rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 700, color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>Acceso</a>
+              <a href="/register" style={{ padding: '0.625rem 2rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 800, background: 'var(--accent-secondary)', color: 'white', boxShadow: '0 4px 15px rgba(0,160,233,0.3)', textDecoration: 'none' }}>COMENZAR GRATIS</a>
+            </>
+          )}
+        </div>
       </div>
-
-      <div className="hidden md:flex items-center gap-10" style={{ display: 'flex', gap: '2.5rem' }}>
-        <a href="#features" className="text-sm font-bold text-dim hover:text-white transition-all hover:tracking-widest" style={{ textDecoration: 'none' }}>FUNCIONALIDADES</a>
-        <a href="#how-it-works" className="text-sm font-bold text-dim hover:text-white transition-all hover:tracking-widest" style={{ textDecoration: 'none' }}>CÓMO FUNCIONA</a>
-        <a href="#stats" className="text-sm font-bold text-dim hover:text-white transition-all hover:tracking-widest" style={{ textDecoration: 'none' }}>ESTADÍSTICAS</a>
-      </div>
-
-      <div className="flex items-center gap-4" style={{ display: 'flex', alignItems: 'center' }}>
-        <button className="px-6 py-2 rounded-lg text-sm font-bold text-white/70 hover:text-white transition-all">Acceso</button>
-        <a href="/dashboard" className="px-8 py-2.5 rounded-lg text-sm font-black transition-all" style={{ background: 'var(--accent-secondary)', color: 'white', boxShadow: '0 4px 15px rgba(0,160,233,0.3)', textDecoration: 'none' }}>
-          COMENZAR GRATIS
-        </a>
-      </div>
-    </div>
-  </nav>
-);
+    </nav>
+  );
+};
 
 const FeatureCard = ({ icon: Icon, title, desc, delay }) => (
   <motion.div
@@ -319,13 +330,15 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-        <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
-        <Route path="/earnings" element={<MainLayout><Earnings /></MainLayout>} />
-        <Route path="/withdrawals" element={<MainLayout><Withdrawals /></MainLayout>} />
-        <Route path="/referrals" element={<MainLayout><Referrals /></MainLayout>} />
-        <Route path="/news" element={<MainLayout><News /></MainLayout>} />
-        <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
+        <Route path="/dashboard" element={<PrivateRoute><MainLayout><Dashboard /></MainLayout></PrivateRoute>} />
+        <Route path="/earnings" element={<PrivateRoute><MainLayout><Earnings /></MainLayout></PrivateRoute>} />
+        <Route path="/withdrawals" element={<PrivateRoute><MainLayout><Withdrawals /></MainLayout></PrivateRoute>} />
+        <Route path="/referrals" element={<PrivateRoute><MainLayout><Referrals /></MainLayout></PrivateRoute>} />
+        <Route path="/news" element={<PrivateRoute><MainLayout><News /></MainLayout></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute><MainLayout><Settings /></MainLayout></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
