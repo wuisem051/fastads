@@ -1,6 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+// Auth
+import { useAuth } from './context/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+import Login from './pages/Login';
+
 // Layouts & Pages
 import AdminLayout from './layouts/AdminLayout';
 import Dashboard from './pages/Dashboard';
@@ -14,14 +19,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        <Route path="/dashboard" element={<AdminLayout><Dashboard /></AdminLayout>} />
-        <Route path="/ads" element={<AdminLayout><AdsManagement /></AdminLayout>} />
-        <Route path="/users" element={<AdminLayout><UserManager /></AdminLayout>} />
-        <Route path="/withdrawals" element={<AdminLayout><Withdrawals /></AdminLayout>} />
-        <Route path="/news" element={<AdminLayout><NewsEditor /></AdminLayout>} />
-        <Route path="/settings" element={<AdminLayout><AdminSettings /></AdminLayout>} />
+        <Route path="/dashboard" element={<PrivateRoute><AdminLayout><Dashboard /></AdminLayout></PrivateRoute>} />
+        <Route path="/ads" element={<PrivateRoute><AdminLayout><AdsManagement /></AdminLayout></PrivateRoute>} />
+        <Route path="/users" element={<PrivateRoute><AdminLayout><UserManager /></AdminLayout></PrivateRoute>} />
+        <Route path="/withdrawals" element={<PrivateRoute><AdminLayout><Withdrawals /></AdminLayout></PrivateRoute>} />
+        <Route path="/news" element={<PrivateRoute><AdminLayout><NewsEditor /></AdminLayout></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute><AdminLayout><AdminSettings /></AdminLayout></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
