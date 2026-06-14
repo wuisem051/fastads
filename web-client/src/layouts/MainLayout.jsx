@@ -13,6 +13,7 @@ import {
     LogOut as LogoutIcon
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
 
 // Read branding from localStorage (set by Admin panel)
@@ -94,6 +95,7 @@ const Sidebar = () => {
 };
 
 export default function MainLayout({ children }) {
+    const { logout } = useAuth();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -189,8 +191,13 @@ export default function MainLayout({ children }) {
                                             {dropdownItems.map((item, index) => (
                                                 <div
                                                     key={index}
-                                                    onClick={() => {
-                                                        if (!item.isLogout) navigate(item.path);
+                                                    onClick={async () => {
+                                                        if (item.isLogout) {
+                                                            await logout();
+                                                            navigate('/login');
+                                                        } else {
+                                                            navigate(item.path);
+                                                        }
                                                         setIsProfileOpen(false);
                                                     }}
                                                     style={{
