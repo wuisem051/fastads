@@ -13,6 +13,7 @@ import {
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import BannerAd from '../components/BannerAd';
 
 const StatCard = ({ title, value, icon, subtitle }) => (
     <div style={{
@@ -56,6 +57,16 @@ export default function Dashboard() {
     const { currentUser, userProfile } = useAuth();
     const [activity, setActivity] = useState([]);
     const [loadingActivity, setLoadingActivity] = useState(true);
+    const [showDemoAd, setShowDemoAd] = useState(false);
+
+    const demoAdData = {
+        title: "Gana dinero sin inversión 🤑",
+        description: "Haz crecer tu red y únete a la planta de procesamiento. Compra, vende y genera ingresos reales directos a tu billetera.",
+        targetUrl: "https://ejemplo.com",
+        duration: 15,
+        reward: 0.015,
+        imageUrl: "https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?w=100&h=100&fit=crop"
+    };
 
     useEffect(() => {
         if (!currentUser) return;
@@ -107,8 +118,12 @@ export default function Dashboard() {
                         Resumen de actividad del día de hoy
                     </p>
                 </div>
-                <button className="gradient-btn" style={{ padding: '0.75rem 1.5rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 900 }}>
-                    <Plus size={20} /> Nueva Tarea
+                <button
+                    onClick={() => setShowDemoAd(true)}
+                    className="gradient-btn"
+                    style={{ padding: '0.75rem 1.5rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 900, cursor: 'pointer' }}
+                >
+                    <Plus size={20} /> Probar Anuncio (Teaser)
                 </button>
             </div>
 
@@ -202,6 +217,18 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Injected Ad Banner */}
+            {showDemoAd && (
+                <BannerAd
+                    adData={demoAdData}
+                    onClose={() => setShowDemoAd(false)}
+                    onComplete={() => {
+                        // Trigger a small local refresh so they see the balance change without reloading
+                        window.location.reload();
+                    }}
+                />
+            )}
         </div>
     );
 }
