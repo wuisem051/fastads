@@ -83,13 +83,7 @@ const Sidebar = () => {
                 ))}
             </nav>
 
-            {/* Balance */}
-            <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '0.875rem', padding: '1rem' }}>
-                    <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7f8c8d', marginBottom: '6px' }}>Tu Balance</p>
-                    <p className="font-digital" style={{ fontSize: '1rem', color: 'var(--accent-secondary)' }}>$1,240.50</p>
-                </div>
-            </div>
+            {/* Balance removed per user request */}
         </aside>
     );
 };
@@ -137,12 +131,8 @@ export default function MainLayout({ children }) {
                         {/* Balances */}
                         <div style={{ display: 'flex', gap: '1.5rem', paddingRight: '2rem', borderRight: '1px solid #f0f2f5' }}>
                             <div style={{ textAlign: 'center' }}>
-                                <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '3px' }}>PUNTOS</p>
-                                <p className="font-digital" style={{ fontSize: '0.85rem' }}>P 0.00</p>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '3px' }}>PUBLICIDAD</p>
-                                <p className="font-digital" style={{ fontSize: '0.85rem', color: 'var(--accent-secondary)' }}>$ 32.73</p>
+                                <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '3px' }}>BALANCE</p>
+                                <p className="font-digital" style={{ fontSize: '0.85rem', color: 'var(--accent-secondary)' }}>$ {Number(useAuth().userProfile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                             </div>
                         </div>
 
