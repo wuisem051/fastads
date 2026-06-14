@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2 } from 'lucide-react';
+import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const cardStyle = {
     background: '#fff',
@@ -19,11 +21,40 @@ const tableHeadCell = {
 };
 
 export default function UserManager() {
-    const users = [
-        { id: 1, name: 'Wuisem', email: 'wuisem051@gmail.com', balance: '1,240.50', joined: '12 Jun 2026', status: 'Active', refers: 49 },
-        { id: 2, name: 'CryptoTrader', email: 'crypto@mail.com', balance: '45.20', joined: '10 Jun 2026', status: 'Active', refers: 12 },
-        { id: 3, name: 'BadActor', email: 'spam@bot.com', balance: '0.00', joined: '01 Jun 2026', status: 'Banned', refers: 0 },
-    ];
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'users'));
+                const usersList = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    joined: doc.data().createdAt ? new Date(doc.data().createdAt.toMillis()).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'
+                }));
+                // Filter out admins from this list if you want to, or keep them
+                setUsers(usersList);
+            } catch (error) {
+                console.error("Error fetching users: ", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUsers();
+    }, []);
+
+    const toggleStatus = async (userId, currentStatus) => {
+        const newStatus = currentStatus === 'Banned' ? 'Active' : 'Banned';
+        try {
+            await updateDoc(doc(db, 'users', userId), { status: newStatus });
+            setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+        } catch (error) {
+            console.error("Error updating user status:", error);
+            alert("Error al cambiar estado. Verifica los permisos.");
+        }
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
@@ -37,7 +68,7 @@ export default function UserManager() {
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.5rem', borderRadius: '1rem', background: '#f8f9fa', border: '1px solid #e6e9ed', color: 'var(--text-dim)' }}>
                         <Users size={18} />
-                        <span style={{ fontSize: '11px', fontWeight: 900 }}>8,492 TOTALES</span>
+                        <span style={{ fontSize: '11px', fontWeight: 900 }}>{loading ? '...' : users.length} TOTALES</span>
                     </div>
                 </div>
             </div>
@@ -64,7 +95,11 @@ export default function UserManager() {
                             </tr>
                         </thead>
                         <tbody>
-                            {users.map((user, i) => (
+                            {loading ? (
+                                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>Cargando usuarios reales...</td></tr>
+                            ) : users.length === 0 ? (
+                                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>No hay usuarios en la base de datos yet</td></tr>
+                            ) : users.map((user, i) => (
                                 <tr key={user.id} style={{ borderBottom: i === users.length - 1 ? 'none' : '1px solid #f9fafb' }}>
                                     <td style={{ padding: '1.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
@@ -74,16 +109,20 @@ export default function UserManager() {
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 color: user.status === 'Banned' ? '#ef4444' : 'var(--accent-secondary)',
                                                 fontWeight: 900, fontSize: '1.25rem'
-                                            }}>{user.name.charAt(0)}</div>
+                                            }}>{(user.name || user.displayName || 'U').charAt(0).toUpperCase()}</div>
                                             <div>
-                                                <p style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>{user.name}</p>
+                                                <p style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>{user.name || user.displayName || 'Usuario'}</p>
                                                 <p style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={12} /> {user.email}</p>
                                             </div>
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
-                                        <p style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', marginBottom: '4px' }}><DollarSign size={16} /> {user.balance} USD</p>
-                                        <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.04em' }}>{user.refers} REFERIDOS ACTIVOS</p>
+                                        <p style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', marginBottom: '4px' }}>
+                                            <DollarSign size={16} /> {Number(user.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
+                                        </p>
+                                        <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.04em' }}>
+                                            {user.referrals || 0} REFERIDOS ACTIVOS
+                                        </p>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
                                         <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{user.joined}</p>
@@ -91,13 +130,13 @@ export default function UserManager() {
                                     <td style={{ padding: '1.5rem' }}>
                                         <span style={{
                                             padding: '6px 14px', borderRadius: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em',
-                                            background: user.status === 'Active' ? '#f0fdf4' : '#fee2e2',
-                                            color: user.status === 'Active' ? '#16a34a' : '#ef4444',
-                                            border: `1px solid ${user.status === 'Active' ? '#bbf7d0' : '#fecaca'}`,
+                                            background: (!user.status || user.status === 'Active') ? '#f0fdf4' : '#fee2e2',
+                                            color: (!user.status || user.status === 'Active') ? '#16a34a' : '#ef4444',
+                                            border: `1px solid ${(!user.status || user.status === 'Active') ? '#bbf7d0' : '#fecaca'}`,
                                             display: 'inline-flex', alignItems: 'center', gap: '6px'
                                         }}>
-                                            {user.status === 'Active' ? <CheckCircle2 size={12} /> : <Ban size={12} />}
-                                            {user.status === 'Active' ? 'ACTIVO' : 'BANEADO'}
+                                            {(!user.status || user.status === 'Active') ? <CheckCircle2 size={12} /> : <Ban size={12} />}
+                                            {(!user.status || user.status === 'Active') ? 'ACTIVO' : 'BANEADO'}
                                         </span>
                                     </td>
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
@@ -105,10 +144,11 @@ export default function UserManager() {
                                             <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} title="Historial">
                                                 <History size={18} />
                                             </button>
-                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} title="Seguridad">
-                                                <Shield size={18} />
-                                            </button>
-                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: user.status === 'Banned' ? '1px solid #bbf7d0' : '1px solid #fecaca', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: user.status === 'Banned' ? '#16a34a' : '#ef4444' }} title={user.status === 'Banned' ? 'Restaurar' : 'Banear'}>
+                                            <button
+                                                onClick={() => toggleStatus(user.id, user.status || 'Active')}
+                                                style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: user.status === 'Banned' ? '1px solid #bbf7d0' : '1px solid #fecaca', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: user.status === 'Banned' ? '#16a34a' : '#ef4444' }}
+                                                title={user.status === 'Banned' ? 'Restaurar' : 'Banear'}
+                                            >
                                                 {user.status === 'Banned' ? <CheckCircle2 size={18} /> : <Ban size={18} />}
                                             </button>
                                         </div>
