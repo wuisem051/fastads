@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { History, AlertCircle, CheckCircle2, ChevronRight, Coins, Wallet } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { History, AlertCircle, CheckCircle2, ChevronRight, Coins, Wallet, Inbox } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const PLATFORM_COLORS = {
     'USDT (TRC20)': '#26A17B',
@@ -8,7 +11,12 @@ const PLATFORM_COLORS = {
 };
 
 export default function Withdrawals() {
+    const { currentUser, userProfile } = useAuth();
     const [selectedPlatform, setSelectedPlatform] = useState(null);
+    const [amount, setAmount] = useState('');
+    const [wallet, setWallet] = useState('');
+    const [recentWithdrawals, setRecentWithdrawals] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const platforms = [
         { name: 'USDT (TRC20)', icon: '₮', min: '5.00' },
@@ -16,10 +24,65 @@ export default function Withdrawals() {
         { name: 'Dogecoin', icon: 'Ð', min: '10.00' },
     ];
 
-    const recentWithdrawals = [
-        { method: 'USDT (TRC20)', amount: '15.00', date: '12 Jun 2026', time: '15:30', status: 'Completado' },
-        { method: 'Litecoin', amount: '22.45', date: '10 Jun 2026', time: '09:12', status: 'Completado' },
-    ];
+    useEffect(() => {
+        if (!currentUser) return;
+        const fetchWithdrawals = async () => {
+            try {
+                const q = query(
+                    collection(db, 'withdrawals'),
+                    where('userId', '==', currentUser.uid),
+                    orderBy('createdAt', 'desc'),
+                    limit(5)
+                );
+                const snap = await getDocs(q);
+                setRecentWithdrawals(snap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    dateLabel: doc.data().createdAt?.toDate().toLocaleDateString('es-ES') || 'Reciente'
+                })));
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchWithdrawals();
+    }, [currentUser]);
+
+    const handleWithdraw = async () => {
+        if (!selectedPlatform || !amount || !wallet) {
+            alert("Por favor completa todos los campos.");
+            return;
+        }
+        const platformObj = platforms.find(p => p.name === selectedPlatform);
+        if (parseFloat(amount) < parseFloat(platformObj.min)) {
+            alert(`El monto mínimo para ${selectedPlatform} es $${platformObj.min}`);
+            return;
+        }
+        if (parseFloat(amount) > (userProfile?.balance || 0)) {
+            alert("Saldo insuficiente.");
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, 'withdrawals'), {
+                userId: currentUser.uid,
+                userEmail: currentUser.email,
+                amount: parseFloat(amount),
+                method: selectedPlatform,
+                walletAddress: wallet,
+                status: 'Pending',
+                createdAt: serverTimestamp()
+            });
+            alert("Solicitud de retiro enviada con éxito.");
+            setAmount('');
+            setWallet('');
+            // Logic to deduct balance would usually be in a Cloud Function or secure transaction
+        } catch (error) {
+            console.error(error);
+            alert("Error al procesar el retiro.");
+        }
+    };
 
     const card = {
         background: '#fff',
@@ -28,6 +91,8 @@ export default function Withdrawals() {
         border: '1px solid #e6e9ed',
         boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
     };
+
+    const balance = userProfile?.balance || 0;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
@@ -63,14 +128,14 @@ export default function Withdrawals() {
                                 <input
                                     type="number"
                                     placeholder="0.00"
+                                    value={amount}
+                                    onChange={e => setAmount(e.target.value)}
                                     style={{
                                         width: '100%', background: '#f8f9fa', border: '1px solid #e6e9ed',
                                         borderRadius: '1rem', padding: '1.25rem 1.5rem',
                                         fontSize: '2rem', fontWeight: 900, color: 'var(--accent-secondary)',
                                         outline: 'none', transition: 'border-color 0.2s'
                                     }}
-                                    onFocus={e => e.target.style.borderColor = 'var(--accent-secondary)'}
-                                    onBlur={e => e.target.style.borderColor = '#e6e9ed'}
                                 />
                             </div>
                             <p style={{ color: 'var(--text-dim)', marginBottom: '1.5rem', fontWeight: 700, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>USD</p>
@@ -91,7 +156,7 @@ export default function Withdrawals() {
                             <h3 style={{ fontSize: '1.1rem', fontWeight: 900 }}>Método de recepción de fondos</h3>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', marginBottom: '2.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '2.5rem' }}>
                             {platforms.map(p => (
                                 <button
                                     key={p.name}
@@ -105,15 +170,6 @@ export default function Withdrawals() {
                                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'
                                     }}
                                 >
-                                    {p.extra && (
-                                        <span style={{
-                                            position: 'absolute', top: '-8px', right: '-8px',
-                                            background: 'var(--accent-primary)', color: '#000',
-                                            fontSize: '9px', fontWeight: 900, padding: '3px 6px',
-                                            borderRadius: '8px', border: '2px solid #fff',
-                                            lineHeight: 1, whiteSpace: 'nowrap'
-                                        }}>{p.extra}</span>
-                                    )}
                                     <div style={{
                                         width: '3rem', height: '3rem', borderRadius: '0.875rem',
                                         background: PLATFORM_COLORS[p.name],
@@ -127,8 +183,31 @@ export default function Withdrawals() {
                             ))}
                         </div>
 
+                        {selectedPlatform && (
+                            <div style={{ marginBottom: '2.5rem', animation: 'fadeIn 0.3s' }}>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+                                    Dirección de Billetera ({selectedPlatform})
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Ingrese su dirección..."
+                                    value={wallet}
+                                    onChange={e => setWallet(e.target.value)}
+                                    style={{
+                                        width: '100%', background: '#f8f9fa', border: '1px solid #e6e9ed',
+                                        borderRadius: '1rem', padding: '1rem 1.5rem',
+                                        fontSize: '1rem', fontWeight: 700, outline: 'none'
+                                    }}
+                                />
+                            </div>
+                        )}
+
                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <button className="gradient-btn" style={{ padding: '1.25rem 2.5rem', borderRadius: '1rem', fontSize: '0.9rem', fontWeight: 900, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <button
+                                onClick={handleWithdraw}
+                                className="gradient-btn"
+                                style={{ padding: '1.25rem 2.5rem', borderRadius: '1rem', fontSize: '0.9rem', fontWeight: 900, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', border: 'none', color: '#fff', background: 'linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%)' }}
+                            >
                                 Confirmar Retiro <ChevronRight size={20} />
                             </button>
                         </div>
@@ -153,7 +232,7 @@ export default function Withdrawals() {
                         <h3 style={{ fontWeight: 900, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Coins size={18} color="var(--accent-secondary)" /> Tu Balance
                         </h3>
-                        <p style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>$1,240.50</p>
+                        <p style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                         <p style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1.5rem' }}>Listo para ser transferido</p>
                         <div style={{ borderTop: '1px solid #f0f2f5', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
@@ -162,7 +241,7 @@ export default function Withdrawals() {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
                                 <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>Total a recibir</span>
-                                <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>$1,240.50</span>
+                                <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>
@@ -173,27 +252,39 @@ export default function Withdrawals() {
                             <History size={18} color="var(--text-dim)" /> Historial
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {recentWithdrawals.map((item, i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 1rem', background: '#f8f9fa', borderRadius: '0.875rem' }}>
-                                    <div>
-                                        <p style={{ fontWeight: 900, fontSize: '0.875rem', marginBottom: '2px' }}>{item.method}</p>
-                                        <p style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 700 }}>{item.date} • {item.time}</p>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontWeight: 900, fontSize: '0.875rem' }}>${item.amount}</p>
-                                        <p style={{ fontSize: '10px', color: 'var(--accent-primary)', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                            <CheckCircle2 size={10} /> {item.status}
-                                        </p>
-                                    </div>
+                            {loading ? (
+                                <p style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Cargando historial...</p>
+                            ) : recentWithdrawals.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '1rem', border: '1px dashed #e6e9ed', borderRadius: '1rem' }}>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 700 }}>No hay retiros aún</p>
                                 </div>
-                            ))}
+                            ) : (
+                                recentWithdrawals.map((item, i) => (
+                                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.875rem 1rem', background: '#f8f9fa', borderRadius: '0.875rem' }}>
+                                        <div>
+                                            <p style={{ fontWeight: 900, fontSize: '0.875rem', marginBottom: '2px' }}>{item.method}</p>
+                                            <p style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 700 }}>{item.dateLabel}</p>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <p style={{ fontWeight: 900, fontSize: '0.875rem' }}>${item.amount}</p>
+                                            <p style={{ fontSize: '10px', color: item.status === 'Approved' ? 'var(--accent-primary)' : item.status === 'Rejected' ? '#ef4444' : '#f59e0b', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                                {item.status === 'Approved' ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
+                                                {item.status === 'Approved' ? 'Completado' : item.status === 'Rejected' ? 'Rechazado' : 'Pendiente'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
-                        <button style={{ width: '100%', marginTop: '1.25rem', padding: '0.875rem', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', background: 'none', border: '1px solid #f0f2f5', borderRadius: '0.875rem', cursor: 'pointer', transition: 'all 0.2s' }}>
-                            Ver todo el historial
-                        </button>
                     </div>
                 </div>
             </div>
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 }

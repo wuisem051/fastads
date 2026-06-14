@@ -1,5 +1,7 @@
-import React from 'react';
-import { Newspaper, Bell, Calendar, ArrowRight, Info, AlertTriangle, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Newspaper, Bell, Calendar, ArrowRight, Info, AlertTriangle, Zap, Inbox } from 'lucide-react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const cardStyle = {
     background: '#fff',
@@ -11,32 +13,27 @@ const cardStyle = {
 };
 
 export default function News() {
-    const news = [
-        {
-            id: 1,
-            title: 'Lanzamiento de Nueva Extensión 2.0',
-            category: 'Actualización',
-            date: '14 Jun 2026',
-            content: 'Hemos optimizado la velocidad de detección de anuncios significativamente. Ahora las recompensas se procesan un 50% más rápido que en la versión anterior.',
-            importance: 'high'
-        },
-        {
-            id: 2,
-            title: 'Mantenimiento Programado para Mañana',
-            category: 'Mantenimiento',
-            date: '13 Jun 2026',
-            content: 'El sistema estará fuera de línea por 2 horas (02:00 - 04:00 GMT) para realizar mejoras en los servidores de seguridad.',
-            importance: 'medium'
-        },
-        {
-            id: 3,
-            title: 'Nuevos Métodos de Retiro: USDT (TRC20)',
-            category: 'Anuncio',
-            date: '10 Jun 2026',
-            content: '¡Buenas noticias! Ya puedes retirar tus ganancias a través de la red TRON de forma instantánea y con comisiones bajas.',
-            importance: 'low'
-        },
-    ];
+    const [news, setNews] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchNews = async () => {
+            try {
+                const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
+                const snap = await getDocs(q);
+                setNews(snap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    dateLabel: doc.data().createdAt?.toDate().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) || 'Reciente'
+                })));
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchNews();
+    }, []);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
@@ -51,45 +48,55 @@ export default function News() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100%, 1fr))', gap: '2rem' }}>
-                {news.map((item) => (
-                    <div key={item.id} className="news-card" style={cardStyle}>
-                        <div style={{ display: 'flex', gap: '2.5rem' }}>
-                            <div style={{
-                                width: '5rem', height: '5rem', borderRadius: '22px', flexShrink: 0,
-                                background: item.category === 'Actualización' ? '#f0fdf4' : item.category === 'Mantenimiento' ? '#fffbeb' : '#f0f9ff',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: item.category === 'Actualización' ? '#16a34a' : item.category === 'Mantenimiento' ? '#d97706' : '#0284c7'
-                            }}>
-                                {item.category === 'Actualización' ? <Zap size={32} /> : item.category === 'Mantenimiento' ? <AlertTriangle size={32} /> : <Newspaper size={32} />}
-                            </div>
-
-                            <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <span style={{
-                                        padding: '4px 12px', borderRadius: '8px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
-                                        background: item.category === 'Actualización' ? '#f0fdf4' : item.category === 'Mantenimiento' ? '#fffbeb' : '#f0f9ff',
-                                        color: item.category === 'Actualización' ? '#16a34a' : item.category === 'Mantenimiento' ? '#d97706' : '#0284c7',
-                                        border: `1px solid ${item.category === 'Actualización' ? '#bbf7d0' : item.category === 'Mantenimiento' ? '#fef3c7' : '#bae6fd'}`
-                                    }}>
-                                        {item.category}
-                                    </span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 600 }}>
-                                        <Calendar size={14} /> {item.date}
-                                    </div>
+            {loading ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '3rem' }}>Cargando noticias...</p>
+            ) : news.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '5rem', background: '#fff', borderRadius: '2rem' }}>
+                    <Inbox size={48} style={{ opacity: 0.2, marginBottom: '1.5rem' }} />
+                    <h3 style={{ fontWeight: 900 }}>No hay noticias publicadas aún</h3>
+                    <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.5rem' }}>Vuelve pronto para enterarte de las novedades.</p>
+                </div>
+            ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100%, 1fr))', gap: '2rem' }}>
+                    {news.map((item) => (
+                        <div key={item.id} className="news-card" style={cardStyle}>
+                            <div style={{ display: 'flex', gap: '2.5rem' }}>
+                                <div style={{
+                                    width: '5rem', height: '5rem', borderRadius: '22px', flexShrink: 0,
+                                    background: item.category === 'Actualización' ? '#f0fdf4' : item.category === 'Mantenimiento' ? '#fffbeb' : '#f0f9ff',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: item.category === 'Actualización' ? '#16a34a' : item.category === 'Mantenimiento' ? '#d97706' : '#0284c7'
+                                }}>
+                                    {item.category === 'Actualización' ? <Zap size={32} /> : item.category === 'Mantenimiento' ? <AlertTriangle size={32} /> : <Newspaper size={32} />}
                                 </div>
 
-                                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '1rem', color: '#2d3436' }}>{item.title}</h2>
-                                <p style={{ color: 'var(--text-secondary)', lineHeight: '1.7', fontSize: '1rem', marginBottom: '1.5rem', maxWidth: '800px' }}>{item.content}</p>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <span style={{
+                                            padding: '4px 12px', borderRadius: '8px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
+                                            background: item.category === 'Actualización' ? '#f0fdf4' : item.category === 'Mantenimiento' ? '#fffbeb' : '#f0f9ff',
+                                            color: item.category === 'Actualización' ? '#16a34a' : item.category === 'Mantenimiento' ? '#d97706' : '#0284c7',
+                                            border: `1px solid ${item.category === 'Actualización' ? '#bbf7d0' : item.category === 'Mantenimiento' ? '#fef3c7' : '#bae6fd'}`
+                                        }}>
+                                            {item.category}
+                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 600 }}>
+                                            <Calendar size={14} /> {item.dateLabel}
+                                        </div>
+                                    </div>
 
-                                <button style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-secondary)', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer', padding: 0 }}>
-                                    Leer artículo completo <ArrowRight size={14} strokeWidth={3} />
-                                </button>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '1rem', color: '#2d3436' }}>{item.title}</h2>
+                                    <p style={{ color: 'var(--text-secondary)', lineHeight: '1.7', fontSize: '1rem', marginBottom: '1.5rem', maxWidth: '800px' }}>{item.content}</p>
+
+                                    <button style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-secondary)', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer', padding: 0 }}>
+                                        Leer artículo completo <ArrowRight size={14} strokeWidth={3} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

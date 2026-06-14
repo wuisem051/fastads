@@ -1,5 +1,8 @@
-import React from 'react';
-import { Users, Share2, Copy, Layers, BarChart2, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Share2, Copy, Layers, BarChart2, ExternalLink, Inbox } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const card = {
     background: '#fff',
@@ -17,18 +20,48 @@ const tableHeadCell = {
 const tableCell = { padding: '1.25rem 2rem' };
 
 export default function Referrals() {
+    const { currentUser, userProfile } = useAuth();
+    const [referralList, setReferralList] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const referralLink = `${window.location.origin}/register?ref=${currentUser?.uid || ''}`;
+
+    useEffect(() => {
+        if (!currentUser) return;
+        const fetchReferrals = async () => {
+            try {
+                // In a real multi-level system, this query would be more complex
+                const q = query(
+                    collection(db, 'users'),
+                    where('referrerId', '==', currentUser.uid)
+                );
+                const snap = await getDocs(q);
+                setReferralList(snap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    joinDate: doc.data().createdAt?.toDate().toLocaleDateString('es-ES') || 'Reciente'
+                })));
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchReferrals();
+    }, [currentUser]);
+
     const levels = [
-        { level: 1, count: 38, earn: '10%' },
-        { level: 2, count: 9, earn: '10%' },
-        { level: 3, count: 1, earn: '10%' },
-        { level: 4, count: 1, earn: '10%' },
+        { level: 1, count: referralList.length, earn: '10%' },
+        { level: 2, count: 0, earn: '10%' },
+        { level: 3, count: 0, earn: '10%' },
+        { level: 4, count: 0, earn: '10%' },
         { level: 5, count: 0, earn: '10%' },
     ];
-    const referralList = [
-        { name: 'tengodinero', level: 1, lastLogin: 'Hace 2h', joinDate: '15 Jun 2026', earned: '0.0505 USD' },
-        { name: 'user_alpha', level: 1, lastLogin: 'Hace 5h', joinDate: '14 Jun 2026', earned: '0.0120 USD' },
-        { name: 'crypto_king', level: 2, lastLogin: 'Ayer', joinDate: '10 Jun 2026', earned: '0.0045 USD' },
-    ];
+
+    const copyLink = () => {
+        navigator.clipboard.writeText(referralLink);
+        alert("¡Enlace copiado!");
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
@@ -43,7 +76,7 @@ export default function Referrals() {
                 <div style={{ ...card, padding: '1rem 1.5rem', borderRadius: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div>
                         <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '4px' }}>Total Red</p>
-                        <p className="font-digital" style={{ color: 'var(--accent-secondary)', fontSize: '1.25rem' }}>49</p>
+                        <p className="font-digital" style={{ color: 'var(--accent-secondary)', fontSize: '1.25rem' }}>{referralList.length}</p>
                     </div>
                     <div style={{ width: '3rem', height: '3rem', borderRadius: '0.875rem', background: 'rgba(0,160,233,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-secondary)' }}>
                         <Users size={24} />
@@ -62,8 +95,8 @@ export default function Referrals() {
                         Comparte este enlace y recibe el 10% de las ganancias de tus invitados de por vida.
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <input readOnly value="https://adshare.com/u/Wuisem" style={{ flex: 1, background: '#f8f9fa', border: '1px solid #e6e9ed', borderRadius: '1rem', padding: '0.875rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, outline: 'none' }} />
-                        <button className="gradient-btn" style={{ padding: '0.875rem 1.25rem', borderRadius: '1rem', flexShrink: 0 }}>
+                        <input readOnly value={referralLink} style={{ flex: 1, background: '#f8f9fa', border: '1px solid #e6e9ed', borderRadius: '1rem', padding: '0.875rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, outline: 'none' }} />
+                        <button onClick={copyLink} className="gradient-btn" style={{ padding: '0.875rem 1.25rem', borderRadius: '1rem', flexShrink: 0, cursor: 'pointer', border: 'none', color: '#fff', background: 'linear-gradient(135deg, var(--accent-secondary), var(--accent-primary))' }}>
                             <Copy size={20} />
                         </button>
                     </div>
@@ -102,10 +135,7 @@ export default function Referrals() {
                         </thead>
                         <tbody>
                             {levels.map(item => (
-                                <tr key={item.level} style={{ borderBottom: '1px solid #f9fafb', transition: 'background 0.2s' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                >
+                                <tr key={item.level} style={{ borderBottom: '1px solid #f9fafb', transition: 'background 0.2s' }}>
                                     <td style={{ ...tableCell, fontWeight: 900, fontSize: '1rem' }}>Nivel {item.level}</td>
                                     <td style={tableCell}><span className="font-digital" style={{ color: 'var(--accent-secondary)', fontSize: '1.1rem' }}>{item.count}</span></td>
                                     <td style={tableCell}>
@@ -125,43 +155,45 @@ export default function Referrals() {
                         <BarChart2 size={22} color="var(--accent-secondary)" />
                         <h3 style={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', fontSize: '0.95rem' }}>Lista de Invitados</h3>
                     </div>
-                    <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '10px', fontWeight: 900, color: 'var(--accent-secondary)', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        Exportar <ExternalLink size={14} />
-                    </button>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid #f0f2f5' }}>
-                                {['Invitado', 'Nivel', 'Último Acceso', 'Registro', 'Tu Beneficio'].map(h => (
-                                    <th key={h} style={tableHeadCell}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {referralList.map((user, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid #f9fafb', transition: 'background 0.2s' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                >
-                                    <td style={tableCell}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                                            <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.875rem', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                                                {user.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <span style={{ fontWeight: 900 }}>{user.name}</span>
-                                        </div>
-                                    </td>
-                                    <td style={tableCell}><span className="font-digital" style={{ fontSize: '1rem' }}>{user.level}</span></td>
-                                    <td style={{ ...tableCell, color: 'var(--text-dim)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{user.lastLogin}</td>
-                                    <td style={{ ...tableCell, color: 'var(--text-dim)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{user.joinDate}</td>
-                                    <td style={{ ...tableCell, textAlign: 'right' }}>
-                                        <span style={{ fontFamily: 'monospace', fontWeight: 900, color: 'var(--accent-primary)', fontSize: '1rem', letterSpacing: '1px' }}>+{user.earned}</span>
-                                    </td>
+                    {loading ? (
+                        <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-dim)' }}>Cargando red...</p>
+                    ) : referralList.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-dim)' }}>
+                            <Inbox size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                            <p style={{ fontWeight: 700 }}>No tienes invitados registrados aún</p>
+                        </div>
+                    ) : (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                    {['Invitado', 'Nivel', 'Registro', 'Tu Beneficio'].map(h => (
+                                        <th key={h} style={tableHeadCell}>{h}</th>
+                                    ))}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {referralList.map((user, i) => (
+                                    <tr key={user.id} style={{ borderBottom: '1px solid #f9fafb', transition: 'background 0.2s' }}>
+                                        <td style={tableCell}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                                                <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.875rem', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                                                    {(user.displayName || 'U').charAt(0).toUpperCase()}
+                                                </div>
+                                                <span style={{ fontWeight: 900 }}>{user.displayName || user.email?.split('@')[0] || 'Usuario'}</span>
+                                            </div>
+                                        </td>
+                                        <td style={tableCell}><span className="font-digital" style={{ fontSize: '1rem' }}>1</span></td>
+                                        <td style={{ ...tableCell, color: 'var(--text-dim)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{user.joinDate}</td>
+                                        <td style={{ ...tableCell, textAlign: 'right' }}>
+                                            <span style={{ fontFamily: 'monospace', fontWeight: 900, color: 'var(--accent-primary)', fontSize: '1rem', letterSpacing: '1px' }}>+$0.0000</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
         </div>
