@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Megaphone, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const cardStyle = {
     background: '#fff',
@@ -43,11 +45,64 @@ const AdminStat = ({ label, value, trend, trendValue, icon: Icon, color }) => (
 );
 
 export default function Dashboard() {
+    const [statsData, setStatsData] = useState({
+        users: 0,
+        ads: 0,
+        withdrawals: 0,
+        income: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                // Users
+                const usersSnap = await getDocs(collection(db, 'users'));
+                const usersCount = usersSnap.size;
+
+                // Ads
+                const adsRef = collection(db, 'ads');
+                const qAds = query(adsRef, where("status", "==", "Active"));
+                const adsSnap = await getDocs(qAds);
+                const activeAdsCount = adsSnap.size;
+
+                // Withdrawals Pending
+                const withdrawalsRef = collection(db, 'withdrawals');
+                const qW = query(withdrawalsRef, where("status", "==", "Pending"));
+                const wSnap = await getDocs(qW);
+
+                let pendingAmount = 0;
+                wSnap.forEach(doc => {
+                    pendingAmount += parseFloat(doc.data().amount || 0);
+                });
+
+                // Total Income (Approximation: sum of user balances or deposits. Here we just sum all users balances as an example metric)
+                let totalBalances = 0;
+                usersSnap.forEach(doc => {
+                    totalBalances += parseFloat(doc.data().balance || 0);
+                });
+
+                setStatsData({
+                    users: usersCount,
+                    ads: activeAdsCount,
+                    withdrawals: pendingAmount,
+                    income: totalBalances
+                });
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
     const stats = [
-        { label: 'Usuarios Totales', value: '12,482', trend: 'up', trendValue: '+12%', icon: Users, color: 'blue' },
-        { label: 'Anuncios Activos', value: '148', trend: 'up', trendValue: '+5%', icon: Megaphone, color: 'purple' },
-        { label: 'Retiros Pendientes', value: '$2,840', trend: 'down', trendValue: '-2%', icon: Wallet, color: 'yellow' },
-        { label: 'Ingresos Mensuales', value: '$45,210', trend: 'up', trendValue: '+18%', icon: TrendingUp, color: 'green' },
+        { label: 'Usuarios Totales', value: loading ? '...' : statsData.users, trend: 'up', trendValue: '+Live', icon: Users, color: 'blue' },
+        { label: 'Anuncios Activos', value: loading ? '...' : statsData.ads, trend: 'up', trendValue: '+Live', icon: Megaphone, color: 'purple' },
+        { label: 'Retiros Pendientes', value: loading ? '...' : `$${statsData.withdrawals.toFixed(2)}`, trend: 'down', trendValue: 'Live', icon: Wallet, color: 'yellow' },
+        { label: 'Balance Global Users', value: loading ? '...' : `$${statsData.income.toFixed(2)}`, trend: 'up', trendValue: '+Live', icon: TrendingUp, color: 'green' },
     ];
 
     return (
@@ -60,8 +115,8 @@ export default function Dashboard() {
                     </p>
                 </div>
                 <div style={{ ...cardStyle, padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--accent-primary)' }}>
-                    <div style={{ width: '10px', height: '10px', background: 'var(--accent-primary)', borderRadius: '50%', boxShadow: '0 0 10px var(--accent-primary)' }}></div>
-                    <span style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema Operativo</span>
+                    <div style={{ width: '10px', height: '10px', background: 'var(--accent-primary)', borderRadius: '50%', boxShadow: '0 0 10px var(--accent-primary)', animation: 'pulse 2s infinite' }}></div>
+                    <span style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema Operativo Online</span>
                 </div>
             </div>
 
@@ -79,21 +134,16 @@ export default function Dashboard() {
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             <Activity size={24} color="var(--accent-secondary)" /> Flujo de Tráfico Global
                         </h3>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            {['7D', '1M', '1A'].map(opt => (
-                                <button key={opt} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e6e9ed', fontSize: '10px', fontWeight: 900, background: opt === '1M' ? '#f0f2f5' : '#fff' }}>{opt}</button>
-                            ))}
-                        </div>
                     </div>
                     <div style={{ flex: 1, border: '2px dashed #f0f2f5', borderRadius: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '0.875rem', fontWeight: 700 }}>
-                        Engine de Gráficas en Construcción...
+                        Recopilando datos históricos de tráfico y recompensas...
                     </div>
                 </div>
 
                 {/* Audit Logs */}
                 <div style={{ ...cardStyle, height: '450px' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        Registro de Auditoría
+                        Registro de Auditoría (Mockup)
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         {[
@@ -116,6 +166,13 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+            <style>{`
+                @keyframes pulse {
+                    0% { box-shadow: 0 0 0 0 rgba(76,209,55, 0.4); }
+                    70% { box-shadow: 0 0 0 10px rgba(76,209,55, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(76,209,55, 0); }
+                }
+            `}</style>
         </div>
     );
 }

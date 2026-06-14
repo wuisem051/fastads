@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wallet, CheckCircle, XCircle, ExternalLink, Clock, DollarSign, CreditCard, ArrowUpRight } from 'lucide-react';
+import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const cardStyle = {
     background: '#fff',
@@ -19,10 +21,48 @@ const tableHeadCell = {
 };
 
 export default function AdminWithdrawals() {
-    const requests = [
-        { id: 1, user: 'Wuisem', method: 'Payeer', account: 'P12345678', amount: '15.00', date: 'Hace 10 min', status: 'Pending' },
-        { id: 2, user: 'CryptoTrader', method: 'Tron (USDT)', account: 'TRX789...xyz', amount: '45.20', date: 'Ayer', status: 'Approved' },
-    ];
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchWithdrawals = async () => {
+            try {
+                // Since this is a new setup we might not have createdAt indexed yet, 
+                // so we just get docs and sort in JS
+                const snap = await getDocs(collection(db, 'withdrawals'));
+                const list = snap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    date: doc.data().createdAt?.toDate().toLocaleString('es-ES') || 'Desconocida'
+                })).sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+                setRequests(list);
+            } catch (error) {
+                console.error("Error fetching withdrawals:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchWithdrawals();
+    }, []);
+
+    const handleAction = async (id, newStatus) => {
+        if (!window.confirm(`¿Estás seguro de marcar esto como ${newStatus}?`)) return;
+        try {
+            await updateDoc(doc(db, 'withdrawals', id), { status: newStatus });
+            setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
+
+            // Note: If approved, you ideally deduct the balance from the user's document in a real transaction.
+            // For now we just update the ticket status.
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert("Error al actualizar la solicitud.");
+        }
+    };
+
+    const pendingCount = requests.filter(r => r.status === 'Pending').length;
+    const totalPaid = requests.filter(r => r.status === 'Approved').reduce((acc, r) => acc + parseFloat(r.amount || 0), 0);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
@@ -36,11 +76,11 @@ export default function AdminWithdrawals() {
                 <div style={{ display: 'flex', gap: '1.5rem' }}>
                     <div style={{ ...cardStyle, padding: '1rem 2rem', border: '1px solid #f59e0b' }}>
                         <p style={{ fontSize: '9px', fontWeight: 900, color: '#f59e0b', textTransform: 'uppercase', marginBottom: '4px' }}>Pendientes</p>
-                        <p style={{ fontSize: '1.25rem', fontWeight: 900 }}>1 SOLICITUD</p>
+                        <p style={{ fontSize: '1.25rem', fontWeight: 900 }}>{loading ? '...' : `${pendingCount} SOLICITUD`}</p>
                     </div>
                     <div style={{ ...cardStyle, padding: '1rem 2rem', border: '1px solid var(--accent-primary)' }}>
                         <p style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: '4px' }}>Total Pagado</p>
-                        <p style={{ fontSize: '1.25rem', fontWeight: 900 }}>$12,450.00</p>
+                        <p style={{ fontSize: '1.25rem', fontWeight: 900 }}>{loading ? '...' : `$${totalPaid.toFixed(2)}`}</p>
                     </div>
                 </div>
             </div>
@@ -59,10 +99,14 @@ export default function AdminWithdrawals() {
                             </tr>
                         </thead>
                         <tbody>
-                            {requests.map((req, i) => (
+                            {loading ? (
+                                <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center' }}>Cargando solicitudes...</td></tr>
+                            ) : requests.length === 0 ? (
+                                <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)' }}>No hay solicitudes registradas en la base de datos.</td></tr>
+                            ) : requests.map((req, i) => (
                                 <tr key={req.id} style={{ borderBottom: i === requests.length - 1 ? 'none' : '1px solid #f9fafb' }}>
                                     <td style={{ padding: '1.5rem' }}>
-                                        <p style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>{req.user}</p>
+                                        <p style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>{req.userEmail || req.userId || 'Usuario'}</p>
                                         <p style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={12} /> {req.date}</p>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
@@ -70,9 +114,9 @@ export default function AdminWithdrawals() {
                                             <div style={{ width: '2rem', height: '2rem', borderRadius: '8px', background: 'rgba(0,160,233,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <CreditCard size={14} color="var(--accent-secondary)" />
                                             </div>
-                                            <p style={{ fontWeight: 900, fontSize: '0.875rem' }}>{req.method}</p>
+                                            <p style={{ fontWeight: 900, fontSize: '0.875rem' }}>{req.method || 'Criptomonedas'}</p>
                                         </div>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'monospace', fontWeight: 700 }}>{req.account}</p>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'monospace', fontWeight: 700 }}>{req.walletAddress || req.account || 'Sin cuenta'}</p>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
                                         <p className="font-digital" style={{ fontSize: '1.15rem' }}>$ {req.amount}</p>
@@ -80,29 +124,27 @@ export default function AdminWithdrawals() {
                                     <td style={{ padding: '1.5rem' }}>
                                         <span style={{
                                             padding: '6px 14px', borderRadius: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em',
-                                            background: req.status === 'Approved' ? '#f0fdf4' : '#fff7ed',
-                                            color: req.status === 'Approved' ? '#16a34a' : '#ea580c',
-                                            border: `1px solid ${req.status === 'Approved' ? '#bbf7d0' : '#ffedd5'}`,
+                                            background: req.status === 'Approved' ? '#f0fdf4' : req.status === 'Rejected' ? '#fee2e2' : '#fff7ed',
+                                            color: req.status === 'Approved' ? '#16a34a' : req.status === 'Rejected' ? '#ef4444' : '#ea580c',
+                                            border: `1px solid ${req.status === 'Approved' ? '#bbf7d0' : req.status === 'Rejected' ? '#fecaca' : '#ffedd5'}`,
                                             display: 'inline-flex', alignItems: 'center', gap: '6px'
                                         }}>
-                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: req.status === 'Approved' ? '#22c55e' : '#f97316' }}></div>
-                                            {req.status === 'Approved' ? 'APROBADO' : 'PENDIENTE'}
+                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: req.status === 'Approved' ? '#22c55e' : req.status === 'Rejected' ? '#ef4444' : '#f97316' }}></div>
+                                            {req.status === 'Approved' ? 'APROBADO' : req.status === 'Rejected' ? 'RECHAZADO' : 'PENDIENTE'}
                                         </span>
                                     </td>
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
                                         {req.status === 'Pending' ? (
                                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                                <button style={{ padding: '0.75rem 1.5rem', borderRadius: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <button onClick={() => handleAction(req.id, 'Approved')} style={{ padding: '0.75rem 1.5rem', borderRadius: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <CheckCircle size={16} /> APROBAR
                                                 </button>
-                                                <button style={{ padding: '0.75rem 1.5rem', borderRadius: '12px', background: '#fee2e2', border: '1px solid #fecaca', color: '#ef4444', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <button onClick={() => handleAction(req.id, 'Rejected')} style={{ padding: '0.75rem 1.5rem', borderRadius: '12px', background: '#fee2e2', border: '1px solid #fecaca', color: '#ef4444', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <XCircle size={16} /> RECHAZAR
                                                 </button>
                                             </div>
                                         ) : (
-                                            <button style={{ background: 'none', border: 'none', color: 'var(--accent-secondary)', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
-                                                <ExternalLink size={16} /> Ver Comprobante
-                                            </button>
+                                            <span style={{ color: 'var(--text-dim)', fontSize: '11px', fontWeight: 900 }}>PROCESADA</span>
                                         )}
                                     </td>
                                 </tr>

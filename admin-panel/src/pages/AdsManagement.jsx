@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Megaphone, Plus, Trash2, Edit3, Globe, Eye, MousePointer2, Clock, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const cardStyle = {
     background: '#fff',
@@ -18,11 +20,71 @@ const tableHeadCell = {
 
 export default function AdsManagement() {
     const [showModal, setShowModal] = useState(false);
+    const [ads, setAds] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const ads = [
-        { id: 1, title: 'Blog Direct Link #1', url: 'https://mi-blog.com/link-1', views: 5420, clicks: 840, status: 'Active', reward: '0.005', timer: '15s' },
-        { id: 2, title: 'Oferta Especial Blog', url: 'https://mi-blog.com/promo', views: 1200, clicks: 150, status: 'Paused', reward: '0.010', timer: '30s' },
-    ];
+    const [form, setForm] = useState({ title: '', url: '', reward: '', timer: '' });
+
+    useEffect(() => {
+        const fetchAds = async () => {
+            try {
+                const snap = await getDocs(collection(db, 'ads'));
+                const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAds(list);
+            } catch (error) {
+                console.error("Error al obtener ads:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAds();
+    }, []);
+
+    const handleCreate = async (e) => {
+        e.preventDefault();
+        try {
+            const docRef = await addDoc(collection(db, 'ads'), {
+                title: form.title,
+                url: form.url,
+                reward: parseFloat(form.reward),
+                timer: parseInt(form.timer),
+                views: 0,
+                clicks: 0,
+                status: 'Active',
+                createdAt: serverTimestamp()
+            });
+            setAds([{
+                id: docRef.id,
+                title: form.title, url: form.url, reward: form.reward, timer: form.timer,
+                views: 0, clicks: 0, status: 'Active'
+            }, ...ads]);
+            setShowModal(false);
+            setForm({ title: '', url: '', reward: '', timer: '' });
+        } catch (error) {
+            console.error(error);
+            alert("Error al guardar campaña.");
+        }
+    };
+
+    const toggleStatus = async (id, currentStatus) => {
+        const newStatus = currentStatus === 'Active' ? 'Paused' : 'Active';
+        try {
+            await updateDoc(doc(db, 'ads', id), { status: newStatus });
+            setAds(ads.map(ad => ad.id === id ? { ...ad, status: newStatus } : ad));
+        } catch (error) {
+            alert('Error');
+        }
+    };
+
+    const deleteAd = async (id) => {
+        if (!window.confirm("¿Eliminar campaña?")) return;
+        try {
+            await deleteDoc(doc(db, 'ads', id));
+            setAds(ads.filter(ad => ad.id !== id));
+        } catch (error) {
+            alert('Error');
+        }
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
@@ -33,7 +95,7 @@ export default function AdsManagement() {
                         Crea y administra las campañas de enlaces para tus usuarios.
                     </p>
                 </div>
-                <button onClick={() => setShowModal(true)} className="gradient-btn" style={{ padding: '1.25rem 2.5rem', borderRadius: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.9rem' }}>
+                <button onClick={() => setShowModal(true)} className="gradient-btn" style={{ padding: '1.25rem 2.5rem', borderRadius: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.9rem', cursor: 'pointer', border: 'none', color: '#fff', background: 'linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%)' }}>
                     <Plus size={22} /> CREAR CAMPAÑA
                 </button>
             </div>
@@ -41,13 +103,8 @@ export default function AdsManagement() {
             {/* Filters Bar */}
             <div style={{ ...cardStyle, padding: '1.25rem 2rem', borderRadius: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {['Todos', 'Activos', 'Pausados', 'Finalizados'].map(f => (
-                        <button key={f} style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', background: f === 'Todos' ? 'var(--accent-secondary)' : '#f8f9fa', color: f === 'Todos' ? '#fff' : 'var(--text-dim)', border: 'none', cursor: 'pointer' }}>{f}</button>
-                    ))}
+                    <button style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', background: 'var(--accent-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>Todos</button>
                 </div>
-                <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    <Filter size={18} /> MÁS FILTROS
-                </button>
             </div>
 
             {/* Ads Table */}
@@ -64,23 +121,27 @@ export default function AdsManagement() {
                             </tr>
                         </thead>
                         <tbody>
-                            {ads.map((ad, i) => (
+                            {loading ? (
+                                <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center' }}>Cargando...</td></tr>
+                            ) : ads.length === 0 ? (
+                                <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)' }}>No hay campañas creadas.</td></tr>
+                            ) : ads.map((ad, i) => (
                                 <tr key={ad.id} style={{ borderBottom: i === ads.length - 1 ? 'none' : '1px solid #f9fafb' }}>
                                     <td style={{ padding: '1.5rem', maxWidth: '300px' }}>
                                         <p style={{ fontWeight: 900, fontSize: '0.95rem', marginBottom: '0.5rem' }}>{ad.title}</p>
                                         <p style={{ fontSize: '11px', color: 'var(--accent-secondary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            <Globe size={12} /> {ad.url}
+                                            <Globe size={12} /> <a href={ad.url} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{ad.url}</a>
                                         </p>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
                                         <div style={{ display: 'flex', gap: '2rem' }}>
                                             <div>
                                                 <p style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '4px' }}>Impresiones</p>
-                                                <p style={{ fontSize: '1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}><Eye size={16} color="var(--accent-primary)" /> {ad.views.toLocaleString()}</p>
+                                                <p style={{ fontSize: '1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}><Eye size={16} color="var(--accent-primary)" /> {(ad.views || 0).toLocaleString()}</p>
                                             </div>
                                             <div>
                                                 <p style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '4px' }}>Clics Únicos</p>
-                                                <p style={{ fontSize: '1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}><MousePointer2 size={16} color="var(--accent-secondary)" /> {ad.clicks.toLocaleString()}</p>
+                                                <p style={{ fontSize: '1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}><MousePointer2 size={16} color="var(--accent-secondary)" /> {(ad.clicks || 0).toLocaleString()}</p>
                                             </div>
                                         </div>
                                     </td>
@@ -93,23 +154,20 @@ export default function AdsManagement() {
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
-                                        <span style={{
+                                        <button onClick={() => toggleStatus(ad.id, ad.status)} style={{
                                             padding: '6px 14px', borderRadius: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em',
                                             background: ad.status === 'Active' ? '#f0fdf4' : '#fff7ed',
                                             color: ad.status === 'Active' ? '#16a34a' : '#ea580c',
                                             border: `1px solid ${ad.status === 'Active' ? '#bbf7d0' : '#ffedd5'}`,
-                                            display: 'inline-flex', alignItems: 'center', gap: '6px'
+                                            display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
                                         }}>
                                             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: ad.status === 'Active' ? '#22c55e' : '#f97316' }}></div>
                                             {ad.status === 'Active' ? 'Activo' : 'Pausado'}
-                                        </span>
+                                        </button>
                                     </td>
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-secondary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}>
-                                                <Edit3 size={18} />
-                                            </button>
-                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}>
+                                            <button onClick={() => deleteAd(ad.id)} style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}>
                                                 <Trash2 size={18} />
                                             </button>
                                         </div>
@@ -126,28 +184,28 @@ export default function AdsManagement() {
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', padding: '2rem' }}>
                     <div style={{ ...cardStyle, width: '100%', maxWidth: '600px', padding: '3rem', position: 'relative' }}>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '2.5rem' }}>Configurar Nueva Campaña</h2>
-                        <form style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Nombre Público de la Campaña</label>
-                                <input type="text" placeholder="Ej: Video Tutorial AdShare" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required type="text" placeholder="Ej: Video Tutorial AdShare" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Enlace de Destino (URL)</label>
-                                <input type="url" placeholder="https://youtube.com/..." style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                <input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} required type="url" placeholder="https://youtube.com/..." style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Recompensa por Clic ($)</label>
-                                    <input type="number" step="0.001" placeholder="0.005" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                    <input value={form.reward} onChange={e => setForm({ ...form, reward: e.target.value })} required type="number" step="0.0001" placeholder="0.005" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Duración Obligatoria (Seg)</label>
-                                    <input type="number" placeholder="15" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                    <input value={form.timer} onChange={e => setForm({ ...form, timer: e.target.value })} required type="number" placeholder="15" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.5rem' }}>
                                 <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: 'none', fontWeight: 900, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
-                                <button type="submit" className="gradient-btn" style={{ flex: 2, padding: '1.25rem', borderRadius: '1.25rem', fontSize: '1rem', fontWeight: 900 }}>GUARDAR Y ACTIVAR</button>
+                                <button type="submit" style={{ flex: 2, padding: '1.25rem', borderRadius: '1.25rem', fontSize: '1rem', fontWeight: 900, cursor: 'pointer', border: 'none', color: '#fff', background: 'linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%)' }}>GUARDAR Y ACTIVAR</button>
                             </div>
                         </form>
                     </div>
