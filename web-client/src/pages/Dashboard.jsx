@@ -116,54 +116,7 @@ export default function Dashboard() {
         fetchAdsData();
     }, [currentUser]);
 
-    useEffect(() => {
-        const handleExtensionMessage = async (event) => {
-            if (event.data.type === 'AD_COMPLETED_SUCCESS') {
-                const { adId, reward, title } = event.data.payload;
-                console.log('AdShare: Acreditando recompensa confirmada por extensión');
 
-                try {
-                    const userRef = doc(db, 'users', currentUser.uid);
-                    const adRef = doc(db, 'ads', adId);
-
-                    // 1. Update user
-                    await updateDoc(userRef, {
-                        balance: increment(reward),
-                        totalEarnings: increment(reward),
-                        adsWatched: increment(1)
-                    });
-
-                    // 2. Update ad clicks
-                    await updateDoc(adRef, {
-                        clicks: increment(1)
-                    });
-
-                    // 3. Register transaction
-                    await addDoc(collection(db, 'transactions'), {
-                        userId: currentUser.uid,
-                        adId: adId,
-                        type: 'ad_view',
-                        amount: reward,
-                        description: title || 'Visualización de Teaser (Extensión)',
-                        platform: 'EXTENSION_POP',
-                        createdAt: serverTimestamp()
-                    });
-
-                    // Refresh
-                    window.location.reload();
-                } catch (err) {
-                    console.error("Error al acreditar recompensa:", err);
-                }
-            }
-
-            if (event.data.type === 'AD_CANCELLED') {
-                alert("Anuncio cancelado. Debes mantener la pestaña abierta para recibir la recompensa.");
-            }
-        };
-
-        window.addEventListener('message', handleExtensionMessage);
-        return () => window.removeEventListener('message', handleExtensionMessage);
-    }, [currentUser]);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -298,41 +251,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Confirmation Dialog (Image 3 style) */}
-            {showAdConfirmation && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-                    <div style={{ background: '#fff', borderRadius: '1.25rem', width: '100%', maxWidth: '400px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                        <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-                            <TrendingUp size={32} />
-                        </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>Nueva Tarea Disponible</h3>
-                        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-                            Ver el sitio <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{showAdConfirmation.title}</span> durante {showAdConfirmation.timer} seg y ganar <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>${showAdConfirmation.reward}</span>?
-                        </p>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button onClick={() => setShowAdConfirmation(null)} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
-                            <button onClick={() => {
-                                // Notify extension if present (via window message)
-                                window.postMessage({
-                                    type: 'AD_START',
-                                    payload: {
-                                        id: showAdConfirmation.id,
-                                        duration: showAdConfirmation.timer,
-                                        reward: showAdConfirmation.reward,
-                                        url: showAdConfirmation.url,
-                                        title: showAdConfirmation.title
-                                    }
-                                }, '*');
 
-                                // Open Target URL is now handled by the extension to monitor the tabId effectively
-                                // window.open(showAdConfirmation.url, '_blank');
-
-                                setShowAdConfirmation(null);
-                            }} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent-secondary)', color: '#fff', fontWeight: 900, cursor: 'pointer', boxShadow: '0 8px 15px rgba(0,160,233,0.2)' }}>ACEPTAR</button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* BannerAd removed from here as per user request to use Extension counter */}
         </div>

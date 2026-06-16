@@ -38,23 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dashboardBtn.addEventListener('click', () => {
         // Replace with your actual dashboard URL
-        chrome.tabs.create({ url: 'http://localhost:5173/dashboard' });
+        chrome.tabs.create({ url: 'https://fastadst.netlify.app/dashboard' });
     });
 
-    // Test simulation
-    const simulateBtn = document.getElementById('simulate-ad');
-    if (simulateBtn) {
-        simulateBtn.addEventListener('click', () => {
-            chrome.runtime.sendMessage({
-                type: 'SIMULATE_AD',
-                payload: {
-                    id: 'test-' + Date.now(),
-                    title: 'Blog de Prueba (Simulación)',
-                    url: 'https://www.google.com',
-                    reward: 0.005,
-                    timer: 15
-                }
-            });
-        });
-    }
+
 });

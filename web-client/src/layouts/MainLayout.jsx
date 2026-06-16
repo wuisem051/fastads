@@ -10,9 +10,13 @@ import {
     ChevronDown,
     PlusCircle,
     History,
-    LogOut as LogoutIcon
+    LogOut as LogoutIcon,
+    Plus,
+    Eye
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
 
@@ -89,10 +93,78 @@ const Sidebar = () => {
 };
 
 export default function MainLayout({ children }) {
-    const { logout } = useAuth();
+    const { currentUser, userProfile, logout } = useAuth();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [showAdConfirmation, setShowAdConfirmation] = useState(null);
     const navigate = useNavigate();
+
+    // Global Ad Checker
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const checkAds = async () => {
+            try {
+                const adsSnap = await getDocs(query(collection(db, 'ads'), where('status', '==', 'Active')));
+                const allAds = adsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+                const transSnap = await getDocs(query(
+                    collection(db, 'transactions'),
+                    where('userId', '==', currentUser.uid),
+                    where('type', '==', 'ad_view'),
+                    where('createdAt', '>=', twoDaysAgo)
+                ));
+                const userHistory = transSnap.docs.map(d => d.data());
+
+                const filtered = allAds.filter(ad => {
+                    if (ad.maxViews && (ad.clicks || 0) >= ad.maxViews) return false;
+                    const lastView = userHistory.filter(h => h.adId === ad.id).sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))[0];
+                    if (lastView && lastView.createdAt) {
+                        const hoursSince = (Date.now() - lastView.createdAt.toMillis()) / (1000 * 60 * 60);
+                        if (hoursSince < (ad.cooldown || 24)) return false;
+                    }
+                    return true;
+                });
+
+                if (filtered.length > 0 && !showAdConfirmation) {
+                    setShowAdConfirmation(filtered[0]);
+                }
+            } catch (error) { console.error("Error checkAds:", error); }
+        };
+
+        const interval = setInterval(checkAds, 60000); // Check every minute
+        checkAds();
+        return () => clearInterval(interval);
+    }, [currentUser]);
+
+    // Global Extension Listener
+    useEffect(() => {
+        const handleExtensionMessage = async (event) => {
+            if (event.data.type === 'AD_COMPLETED_SUCCESS') {
+                const { adId, reward, title } = event.data.payload;
+                try {
+                    await updateDoc(doc(db, 'users', currentUser.uid), {
+                        balance: increment(reward),
+                        totalEarnings: increment(reward),
+                        adsWatched: increment(1)
+                    });
+                    await updateDoc(doc(db, 'ads', adId), { clicks: increment(1) });
+                    await addDoc(collection(db, 'transactions'), {
+                        userId: currentUser.uid, adId, type: 'ad_view', amount: reward,
+                        description: title || 'Anuncio completado', platform: 'AUTO_POP',
+                        createdAt: serverTimestamp()
+                    });
+                    window.location.reload();
+                } catch (err) { console.error(err); }
+            }
+            if (event.data.type === 'AD_CANCELLED') {
+                alert("Anuncio cancelado. Mantén la pestaña abierta.");
+            }
+        };
+        window.addEventListener('message', handleExtensionMessage);
+        return () => window.removeEventListener('message', handleExtensionMessage);
+    }, [currentUser]);
 
     const dropdownItems = [
         { icon: <PlusCircle size={16} />, label: 'Ordenar publicidad', path: '/ads' },
@@ -281,6 +353,37 @@ export default function MainLayout({ children }) {
                         {children}
                     </div>
                 </section>
+
+                {/* Global Confirmation Popup */}
+                {showAdConfirmation && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                        <div style={{ background: '#fff', borderRadius: '1.25rem', width: '100%', maxWidth: '400px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                            <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                                <Plus size={32} />
+                            </div>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>Nueva Tarea Disponible</h3>
+                            <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                                ¿Ver el sitio <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{showAdConfirmation.title}</span> durante {showAdConfirmation.timer} seg y ganar <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>${showAdConfirmation.reward}</span>?
+                            </p>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button onClick={() => setShowAdConfirmation(null)} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
+                                <button onClick={() => {
+                                    window.postMessage({
+                                        type: 'AD_START',
+                                        payload: {
+                                            id: showAdConfirmation.id,
+                                            duration: showAdConfirmation.timer,
+                                            reward: showAdConfirmation.reward,
+                                            url: showAdConfirmation.url,
+                                            title: showAdConfirmation.title
+                                        }
+                                    }, '*');
+                                    setShowAdConfirmation(null);
+                                }} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent-secondary)', color: '#fff', fontWeight: 900, cursor: 'pointer', boxShadow: '0 8px 15px rgba(0,160,233,0.2)' }}>ACEPTAR</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
             <style>{`
                 @keyframes dropdown-in {
