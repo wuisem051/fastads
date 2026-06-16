@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, CheckCircle, XCircle, ExternalLink, Clock, DollarSign, CreditCard, ArrowUpRight } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, orderBy, runTransaction, increment, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const cardStyle = {
@@ -48,13 +48,40 @@ export default function AdminWithdrawals() {
     }, []);
 
     const handleAction = async (id, newStatus) => {
-        if (!window.confirm(`¿Estás seguro de marcar esto como ${newStatus}?`)) return;
-        try {
-            await updateDoc(doc(db, 'withdrawals', id), { status: newStatus });
-            setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
+        const req = requests.find(r => r.id === id);
+        if (!req) return;
 
-            // Note: If approved, you ideally deduct the balance from the user's document in a real transaction.
-            // For now we just update the ticket status.
+        if (!window.confirm(`¿Estás seguro de marcar esto como ${newStatus}?`)) return;
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const withdrawalRef = doc(db, 'withdrawals', id);
+
+                // 1. Update status
+                transaction.update(withdrawalRef, { status: newStatus });
+
+                // 2. If Rejected, return money to user
+                if (newStatus === 'Rejected') {
+                    const userRef = doc(db, 'users', req.userId);
+                    transaction.update(userRef, {
+                        balance: increment(req.amount)
+                    });
+
+                    // Log the refund
+                    const transRef = doc(collection(db, 'transactions'));
+                    transaction.set(transRef, {
+                        userId: req.userId,
+                        type: 'refund',
+                        amount: req.amount,
+                        description: 'Reembolso por retiro rechazado',
+                        platform: 'ADMIN_SYSTEM',
+                        createdAt: serverTimestamp()
+                    });
+                }
+            });
+
+            setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
+            alert(`Solicitud ${newStatus === 'Approved' ? 'aprobada' : 'rechazada'} correctamente.`);
         } catch (error) {
             console.error("Error updating status:", error);
             alert("Error al actualizar la solicitud.");

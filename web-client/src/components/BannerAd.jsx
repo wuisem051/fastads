@@ -38,9 +38,18 @@ export default function BannerAd({ adData, onClose, onComplete }) {
                 adsWatched: increment(1)
             });
 
+            // Update ad click counter (if it's a real ad from Firestore)
+            if (adData?.id) {
+                const adRef = doc(db, 'ads', adData.id);
+                await updateDoc(adRef, {
+                    clicks: increment(1)
+                });
+            }
+
             // Register transaction in activity feed
             await addDoc(collection(db, 'transactions'), {
                 userId: currentUser.uid,
+                adId: adData?.id || 'demo',
                 type: 'ad_view',
                 amount: reward,
                 description: adData?.title || 'Visualización de Teaser',

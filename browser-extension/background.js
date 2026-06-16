@@ -20,8 +20,13 @@ chrome.storage.local.get(['balance', 'points', 'adsViewed', 'enabled'], (data) =
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'AD_ACCEPTED') {
-        console.log(`Iniciando contador: ${message.duration}s`);
-        startAdTimer(message.duration, message.reward, sender.tab.id);
+        console.log(`Iniciando flujo de anuncio: ${message.url} - ${message.duration}s`);
+
+        // Abrir la URL del anuncio en una nueva pestaña
+        chrome.tabs.create({ url: message.url, active: false }, (newTab) => {
+            // Pasamos sender.tab.id como sourceTabId para saber a quién avisar cuando termine
+            startAdTimer(message.duration, message.reward, newTab.id, message.adId, sender.tab.id, message.adTitle);
+        });
     }
 
     if (message.type === 'TOGGLE_ADS') {
@@ -45,14 +50,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 /**
  * Handles the countdown logic and updates the extension icon badge
  */
-function startAdTimer(duration, reward, tabId) {
+function startAdTimer(duration, reward, tabId, adId, sourceTabId, adTitle) {
     let timeLeft = duration;
+    let isTabClosed = false;
+
+    // Monitor if the tab is closed
+    const checkTabRemoved = (removedTabId) => {
+        if (removedTabId === tabId) {
+            isTabClosed = true;
+        }
+    };
+    chrome.tabs.onRemoved.addListener(checkTabRemoved);
 
     // Set initial badge
     chrome.action.setBadgeText({ text: timeLeft.toString() });
     chrome.action.setBadgeBackgroundColor({ color: '#1a1e27' });
 
     const interval = setInterval(() => {
+        if (isTabClosed) {
+            clearInterval(interval);
+            chrome.tabs.onRemoved.removeListener(checkTabRemoved);
+            chrome.action.setBadgeText({ text: '!' }); // Error/Cancelled
+            chrome.action.setBadgeBackgroundColor({ color: '#ff4444' });
+
+            // Notify the Dashboard that the ad was cancelled
+            if (sourceTabId) {
+                chrome.tabs.sendMessage(sourceTabId, { type: 'AD_CANCELLED' });
+            }
+
+            setTimeout(() => chrome.action.setBadgeText({ text: '' }), 3000);
+            return;
+        }
+
         timeLeft--;
 
         if (timeLeft > 0) {
@@ -61,10 +90,19 @@ function startAdTimer(duration, reward, tabId) {
         } else {
             // Timer finished
             clearInterval(interval);
+            chrome.tabs.onRemoved.removeListener(checkTabRemoved);
             chrome.action.setBadgeText({ text: '✓' }); // Show checkmark for success
             chrome.action.setBadgeBackgroundColor({ color: '#00ff88' }); // Change to green on finish
 
-            rewardUser(reward);
+            rewardUser(reward, adId);
+
+            // Notify the Dashboard that the ad was successful
+            if (sourceTabId) {
+                chrome.tabs.sendMessage(sourceTabId, {
+                    type: 'AD_COMPLETED_SUCCESS',
+                    payload: { adId, reward, title: adTitle }
+                });
+            }
 
             // Clear badge after 5 seconds
             setTimeout(() => {
@@ -75,7 +113,7 @@ function startAdTimer(duration, reward, tabId) {
     }, 1000);
 }
 
-function rewardUser(amount) {
+function rewardUser(amount, adId) {
     userState.balance += amount;
     userState.adsViewed += 1;
 
@@ -86,9 +124,13 @@ function rewardUser(amount) {
         chrome.notifications.create({
             type: 'basic',
             iconUrl: 'icons/icon128.png',
-            title: 'Pago Procesado',
+            title: '¡Pago Acreditado!',
             message: `Has recibido $${amount.toFixed(4)} correctamente.`,
             priority: 2
         });
+
+        // Opcional: Aquí se debería llamar a una API o a Firebase directamente 
+        // para persistir el cambio en la base de datos central.
+        console.log(`Lograr acreditación en Firestore para ad: ${adId}`);
     });
 }

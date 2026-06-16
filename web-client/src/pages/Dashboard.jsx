@@ -10,7 +10,7 @@ import {
     Download,
     Inbox
 } from 'lucide-react';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import BannerAd from '../components/BannerAd';
@@ -57,16 +57,113 @@ export default function Dashboard() {
     const { currentUser, userProfile } = useAuth();
     const [activity, setActivity] = useState([]);
     const [loadingActivity, setLoadingActivity] = useState(true);
-    const [showDemoAd, setShowDemoAd] = useState(false);
+    const [availableAds, setAvailableAds] = useState([]);
+    const [loadingAds, setLoadingAds] = useState(true);
+    const [showAdConfirmation, setShowAdConfirmation] = useState(null);
+    const [showAd, setShowAd] = useState(null);
 
-    const demoAdData = {
-        title: "Gana dinero sin inversión 🤑",
-        description: "Haz crecer tu red y únete a la planta de procesamiento. Compra, vende y genera ingresos reales directos a tu billetera.",
-        targetUrl: "https://ejemplo.com",
-        duration: 15,
-        reward: 0.015,
-        imageUrl: "https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?w=100&h=100&fit=crop"
-    };
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const fetchAdsData = async () => {
+            try {
+                // 1. Fetch active ads
+                const adsSnap = await getDocs(query(collection(db, 'ads'), where('status', '==', 'Active')));
+                const allAds = adsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // 2. Fetch user's recent ad history to check cooldowns
+                // We'll look at transactions from the last 48h to be safe
+                const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+                const transSnap = await getDocs(query(
+                    collection(db, 'transactions'),
+                    where('userId', '==', currentUser.uid),
+                    where('type', '==', 'ad_view'),
+                    where('createdAt', '>=', twoDaysAgo)
+                ));
+                const userHistory = transSnap.docs.map(d => d.data());
+
+                // 3. Filter ads
+                const filtered = allAds.filter(ad => {
+                    // Check total limit
+                    if (ad.maxViews && (ad.clicks || 0) >= ad.maxViews) return false;
+
+                    // Check user cooldown
+                    const lastView = userHistory
+                        .filter(h => h.adId === ad.id)
+                        .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))[0];
+
+                    if (lastView && lastView.createdAt) {
+                        const hoursSince = (Date.now() - lastView.createdAt.toMillis()) / (1000 * 60 * 60);
+                        if (hoursSince < (ad.cooldown || 24)) return false;
+                    }
+
+                    return true;
+                });
+
+                setAvailableAds(filtered);
+
+                // Automatically show confirmation for the first available ad if none is showing
+                if (filtered.length > 0 && !showAd && !showAdConfirmation) {
+                    setShowAdConfirmation(filtered[0]);
+                }
+            } catch (error) {
+                console.error("Error loading ads:", error);
+            } finally {
+                setLoadingAds(false);
+            }
+        };
+
+        fetchAdsData();
+    }, [currentUser]);
+
+    useEffect(() => {
+        const handleExtensionMessage = async (event) => {
+            if (event.data.type === 'AD_COMPLETED_SUCCESS') {
+                const { adId, reward, title } = event.data.payload;
+                console.log('AdShare: Acreditando recompensa confirmada por extensión');
+
+                try {
+                    const userRef = doc(db, 'users', currentUser.uid);
+                    const adRef = doc(db, 'ads', adId);
+
+                    // 1. Update user
+                    await updateDoc(userRef, {
+                        balance: increment(reward),
+                        totalEarnings: increment(reward),
+                        adsWatched: increment(1)
+                    });
+
+                    // 2. Update ad clicks
+                    await updateDoc(adRef, {
+                        clicks: increment(1)
+                    });
+
+                    // 3. Register transaction
+                    await addDoc(collection(db, 'transactions'), {
+                        userId: currentUser.uid,
+                        adId: adId,
+                        type: 'ad_view',
+                        amount: reward,
+                        description: title || 'Visualización de Teaser (Extensión)',
+                        platform: 'EXTENSION_POP',
+                        createdAt: serverTimestamp()
+                    });
+
+                    // Refresh
+                    window.location.reload();
+                } catch (err) {
+                    console.error("Error al acreditar recompensa:", err);
+                }
+            }
+
+            if (event.data.type === 'AD_CANCELLED') {
+                alert("Anuncio cancelado. Debes mantener la pestaña abierta para recibir la recompensa.");
+            }
+        };
+
+        window.addEventListener('message', handleExtensionMessage);
+        return () => window.removeEventListener('message', handleExtensionMessage);
+    }, [currentUser]);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -118,13 +215,12 @@ export default function Dashboard() {
                         Resumen de actividad del día de hoy
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowDemoAd(true)}
-                    className="gradient-btn"
-                    style={{ padding: '0.75rem 1.5rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 900, cursor: 'pointer' }}
-                >
-                    <Plus size={20} /> Probar Anuncio (Teaser)
-                </button>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ background: '#fff', padding: '0.75rem 1.5rem', borderRadius: '1rem', border: '1px solid #e6e9ed', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 12px #22c55e' }}></div>
+                        <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)' }}>{loadingAds ? '...' : availableAds.length} ANUNCIOS DISPONIBLES</span>
+                    </div>
+                </div>
             </div>
 
             {/* Stat Cards — datos reales de Firestore */}
@@ -183,52 +279,62 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Extension Promo Banner */}
-                <div style={{
-                    background: 'linear-gradient(135deg, #00a0e9 0%, #4cd137 100%)',
-                    borderRadius: '2rem', padding: '2rem',
-                    position: 'relative', overflow: 'hidden',
-                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                    minHeight: '320px', color: '#fff'
-                }}>
-                    <div style={{ position: 'relative', zIndex: 1 }}>
-                        <p style={{ fontSize: '10px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.75, marginBottom: '1rem' }}>
-                            ✦ Extensión Chrome ✦
-                        </p>
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 900, lineHeight: 1.3, marginBottom: '1rem' }}>
-                            ¡Activa y gana en segundo plano!
-                        </h3>
-                        <p style={{ fontSize: '0.85rem', opacity: 0.85, lineHeight: 1.6, marginBottom: '2rem' }}>
-                            La extensión monitorea anuncios automáticamente y acredita el pago en tiempo real.
-                        </p>
+                {/* Extension Promo Banner Removed/Moved and Replaced by Ads Grid if desired, but let's keep UI mostly same */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <div style={{ borderRadius: '2rem', padding: '2.5rem', background: 'linear-gradient(135deg, #00a0e9 0%, #4cd137 100%)', border: '1px solid #e1e4e8', color: '#fff', minHeight: 'auto' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '1rem' }}>Gana más con la Extensión</h3>
+                        <p style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '1.5rem' }}>Instala nuestra herramienta oficial para automatizar tus ganancias.</p>
+                        <button style={{ background: '#000', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '1rem', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>DESCARGAR AHORA</button>
                     </div>
-                    <button style={{
-                        background: 'rgba(0,0,0,0.85)', color: '#fff',
-                        padding: '1rem 1.5rem', borderRadius: '1rem',
-                        fontWeight: 900, border: 'none', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '0.75rem',
-                        fontSize: '0.85rem', letterSpacing: '0.06em', textTransform: 'uppercase',
-                        zIndex: 1, position: 'relative', width: 'fit-content'
-                    }}>
-                        <Download size={20} /> Instalar Extensión
-                    </button>
-                    <div style={{ position: 'absolute', right: '-2rem', bottom: '-2rem', opacity: 0.1 }}>
-                        <MousePointer2 size={200} />
+
+                    <div style={{ background: '#fff', borderRadius: '2rem', padding: '2rem', border: '1px solid #e6e9ed', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '150px', textAlign: 'center' }}>
+                        <div>
+                            <TrendingUp size={40} color="var(--accent-secondary)" style={{ marginBottom: '1rem', opacity: 0.2 }} />
+                            <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-dim)' }}>
+                                {loadingAds ? 'Buscando tareas...' : availableAds.length > 0 ? '¡Un anuncio está activo!' : 'No hay tareas disponibles por ahora.'}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Injected Ad Banner */}
-            {showDemoAd && (
-                <BannerAd
-                    adData={demoAdData}
-                    onClose={() => setShowDemoAd(false)}
-                    onComplete={() => {
-                        // Trigger a small local refresh so they see the balance change without reloading
-                        window.location.reload();
-                    }}
-                />
+            {/* Confirmation Dialog (Image 3 style) */}
+            {showAdConfirmation && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                    <div style={{ background: '#fff', borderRadius: '1.25rem', width: '100%', maxWidth: '400px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+                        <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                            <TrendingUp size={32} />
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>Nueva Tarea Disponible</h3>
+                        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                            Ver el sitio <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{showAdConfirmation.title}</span> durante {showAdConfirmation.timer} seg y ganar <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>${showAdConfirmation.reward}</span>?
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button onClick={() => setShowAdConfirmation(null)} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
+                            <button onClick={() => {
+                                // Notify extension if present (via window message)
+                                window.postMessage({
+                                    type: 'AD_START',
+                                    payload: {
+                                        id: showAdConfirmation.id,
+                                        duration: showAdConfirmation.timer,
+                                        reward: showAdConfirmation.reward,
+                                        url: showAdConfirmation.url,
+                                        title: showAdConfirmation.title
+                                    }
+                                }, '*');
+
+                                // Open Target URL is now handled by the extension to monitor the tabId effectively
+                                // window.open(showAdConfirmation.url, '_blank');
+
+                                setShowAdConfirmation(null);
+                            }} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent-secondary)', color: '#fff', fontWeight: 900, cursor: 'pointer', boxShadow: '0 8px 15px rgba(0,160,233,0.2)' }}>ACEPTAR</button>
+                        </div>
+                    </div>
+                </div>
             )}
+
+            {/* BannerAd removed from here as per user request to use Extension counter */}
         </div>
     );
 }

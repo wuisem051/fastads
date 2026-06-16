@@ -91,6 +91,7 @@ const Sidebar = () => {
 export default function MainLayout({ children }) {
     const { logout } = useAuth();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
     const navigate = useNavigate();
 
     const dropdownItems = [
@@ -134,6 +135,58 @@ export default function MainLayout({ children }) {
                                 <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '3px' }}>BALANCE</p>
                                 <p className="font-digital" style={{ fontSize: '0.85rem', color: 'var(--accent-secondary)' }}>$ {Number(useAuth().userProfile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                             </div>
+                        </div>
+
+                        {/* Notifications Bell */}
+                        <div style={{ position: 'relative' }}>
+                            <div
+                                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                style={{
+                                    width: '2.5rem', height: '2.5rem', borderRadius: '0.875rem',
+                                    border: '1px solid #e6e9ed', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', color: 'var(--text-dim)', cursor: 'pointer',
+                                    transition: 'all 0.2s', position: 'relative',
+                                    background: isNotifOpen ? '#f8f9fa' : 'transparent'
+                                }}
+                                onMouseEnter={e => !isNotifOpen && (e.currentTarget.style.background = '#fcfdfe')}
+                                onMouseLeave={e => !isNotifOpen && (e.currentTarget.style.background = 'transparent')}
+                            >
+                                <Bell size={18} />
+                                <div style={{
+                                    position: 'absolute', top: '-4px', right: '-4px',
+                                    width: '14px', height: '14px', background: '#ef4444',
+                                    borderRadius: '50%', border: '2px solid #fff',
+                                    fontSize: '8px', color: '#fff', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', fontWeight: 900
+                                }}>1</div>
+                            </div>
+
+                            {isNotifOpen && (
+                                <>
+                                    <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setIsNotifOpen(false)}></div>
+                                    <div style={{
+                                        position: 'absolute', top: '120%', right: 0, width: '320px',
+                                        background: '#fff', borderRadius: '1.25rem', border: '1px solid #e6e9ed',
+                                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)', zIndex: 100, overflow: 'hidden',
+                                        animation: 'dropdown-in 0.2s ease-out'
+                                    }}>
+                                        <div style={{ padding: '1.25rem', borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <h4 style={{ fontSize: '0.9rem', fontWeight: 900 }}>Notificaciones</h4>
+                                            <span style={{ fontSize: '10px', color: 'var(--accent-secondary)', fontWeight: 700, cursor: 'pointer' }}>Marcar como leídas</span>
+                                        </div>
+                                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                            <div style={{ padding: '1rem', borderBottom: '1px solid #f9fafb', background: 'rgba(0,160,233,0.02)', cursor: 'pointer' }}>
+                                                <p style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>¡Bienvenido a FastAds!</p>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.4 }}>Empieza a ver anuncios y ganar recompensas hoy mismo.</p>
+                                                <p style={{ fontSize: '9px', color: 'var(--accent-secondary)', fontWeight: 700, marginTop: '8px' }}>Hace 5 minutos</p>
+                                            </div>
+                                            <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-dim)' }}>
+                                                <p style={{ fontSize: '0.8rem' }}>No tienes más notificaciones</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* User Profile with Dropdown */}

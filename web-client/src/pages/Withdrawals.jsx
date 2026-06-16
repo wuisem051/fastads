@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { History, AlertCircle, CheckCircle2, ChevronRight, Coins, Wallet, Inbox } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp, runTransaction, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const PLATFORM_COLORS = {
@@ -65,22 +65,52 @@ export default function Withdrawals() {
         }
 
         try {
-            await addDoc(collection(db, 'withdrawals'), {
-                userId: currentUser.uid,
-                userEmail: currentUser.email,
-                amount: parseFloat(amount),
-                method: selectedPlatform,
-                walletAddress: wallet,
-                status: 'Pending',
-                createdAt: serverTimestamp()
+            await runTransaction(db, async (transaction) => {
+                const userRef = doc(db, 'users', currentUser.uid);
+                const userSnap = await transaction.get(userRef);
+
+                if (!userSnap.exists()) throw "User not found";
+                const currentBalance = userSnap.data().balance || 0;
+
+                if (currentBalance < parseFloat(amount)) {
+                    throw "Saldo insuficiente";
+                }
+
+                // 1. Deduct balance
+                transaction.update(userRef, {
+                    balance: increment(-parseFloat(amount))
+                });
+
+                // 2. Create withdrawal request
+                const withdrawalRef = doc(collection(db, 'withdrawals'));
+                transaction.set(withdrawalRef, {
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    amount: parseFloat(amount),
+                    method: selectedPlatform,
+                    walletAddress: wallet,
+                    status: 'Pending',
+                    createdAt: serverTimestamp()
+                });
+
+                // 3. Register transaction
+                const transRef = doc(collection(db, 'transactions'));
+                transaction.set(transRef, {
+                    userId: currentUser.uid,
+                    type: 'withdrawal',
+                    amount: -parseFloat(amount),
+                    description: `Retiro solicitado (${selectedPlatform})`,
+                    platform: 'FASTADS_PAY',
+                    createdAt: serverTimestamp()
+                });
             });
-            alert("Solicitud de retiro enviada con éxito.");
+
+            alert("Solicitud de retiro enviada con éxito. El saldo ha sido descontado.");
             setAmount('');
             setWallet('');
-            // Logic to deduct balance would usually be in a Cloud Function or secure transaction
         } catch (error) {
             console.error(error);
-            alert("Error al procesar el retiro.");
+            alert(typeof error === 'string' ? error : "Error al procesar el retiro.");
         }
     };
 

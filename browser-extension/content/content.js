@@ -119,6 +119,26 @@ function startLocalProgressBar(duration) {
     }, 1000);
 }
 
+// Listen for messages from the website (Dashboard)
+window.addEventListener('message', (event) => {
+    if (event.data.type === 'AD_START') {
+        console.log('Ad share: Capturando inicio de anuncio desde el sitio');
+        const payload = event.data.payload;
+
+        chrome.runtime.sendMessage({
+            type: 'AD_ACCEPTED',
+            adId: payload.id,
+            adTitle: payload.title,
+            duration: parseInt(payload.duration),
+            reward: parseFloat(payload.reward),
+            url: payload.url
+        });
+
+        // Start a local progress bar on the current page to show the user it's working
+        startLocalProgressBar(parseInt(payload.duration));
+    }
+});
+
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'SHOW_AD_INVITATION') {
         const adData = {
@@ -128,5 +148,13 @@ chrome.runtime.onMessage.addListener((message) => {
             url: message.payload.url
         };
         showAdInvitation(adData);
+    }
+
+    // Capture completion/cancellation from background and relay to Dashboard website
+    if (message.type === 'AD_COMPLETED_SUCCESS' || message.type === 'AD_CANCELLED') {
+        window.postMessage({
+            type: message.type,
+            payload: message.payload
+        }, '*');
     }
 });

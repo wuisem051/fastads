@@ -23,7 +23,7 @@ export default function AdsManagement() {
     const [ads, setAds] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const [form, setForm] = useState({ title: '', url: '', reward: '', timer: '' });
+    const [form, setForm] = useState({ title: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
 
     useEffect(() => {
         const fetchAds = async () => {
@@ -51,15 +51,18 @@ export default function AdsManagement() {
                 views: 0,
                 clicks: 0,
                 status: 'Active',
+                maxViews: parseInt(form.maxViews) || 1000,
+                cooldown: parseInt(form.cooldown) || 24,
                 createdAt: serverTimestamp()
             });
             setAds([{
                 id: docRef.id,
                 title: form.title, url: form.url, reward: form.reward, timer: form.timer,
+                maxViews: form.maxViews, cooldown: form.cooldown,
                 views: 0, clicks: 0, status: 'Active'
             }, ...ads]);
             setShowModal(false);
-            setForm({ title: '', url: '', reward: '', timer: '' });
+            setForm({ title: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
         } catch (error) {
             console.error(error);
             alert("Error al guardar campaña.");
@@ -115,7 +118,7 @@ export default function AdsManagement() {
                             <tr>
                                 <th style={{ ...tableHeadCell, paddingTop: '1.5rem' }}>Campaña / Destino</th>
                                 <th style={{ ...tableHeadCell, paddingTop: '1.5rem' }}>Estadísticas de Tráfico</th>
-                                <th style={{ ...tableHeadCell, paddingTop: '1.5rem' }}>Recompensa & Tiempo</th>
+                                <th style={{ ...tableHeadCell, paddingTop: '1.5rem' }}>Capacidad & Intervalo</th>
                                 <th style={{ ...tableHeadCell, paddingTop: '1.5rem' }}>Estado</th>
                                 <th style={{ ...tableHeadCell, paddingTop: '1.5rem', textAlign: 'right' }}>Acciones</th>
                             </tr>
@@ -146,11 +149,15 @@ export default function AdsManagement() {
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
-                                        <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '4px' }}>
-                                            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent-primary)', fontFamily: 'monospace' }}>${ad.reward}</span>
-                                            <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Clock size={12} /> {ad.timer} Timer
-                                            </span>
+                                        <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '8px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent-primary)', fontFamily: 'monospace' }}>${ad.reward}</span>
+                                                <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)', background: '#f8f9fa', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e6e9ed' }}>{ad.timer}s</span>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <p style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Límite: <span style={{ color: 'var(--text-primary)' }}>{ad.maxViews || '∞'} clics</span></p>
+                                                <p style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Reset: <span style={{ color: 'var(--text-primary)' }}>Cada {ad.cooldown || 24}h</span></p>
+                                            </div>
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
@@ -201,6 +208,16 @@ export default function AdsManagement() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Duración Obligatoria (Seg)</label>
                                     <input value={form.timer} onChange={e => setForm({ ...form, timer: e.target.value })} required type="number" placeholder="15" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Límite de Clics Totales</label>
+                                    <input value={form.maxViews} onChange={e => setForm({ ...form, maxViews: e.target.value })} required type="number" placeholder="Ej: 1000" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Frecuencia (Horas)</label>
+                                    <input value={form.cooldown} onChange={e => setForm({ ...form, cooldown: e.target.value })} required type="number" placeholder="Ej: 24" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.5rem' }}>

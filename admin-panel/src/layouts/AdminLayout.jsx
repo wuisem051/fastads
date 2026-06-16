@@ -11,7 +11,9 @@ import {
     Search,
     TrendingUp
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import logoImg from '../assets/logo.png';
 
 const getBrand = () => ({
@@ -97,6 +99,18 @@ const Sidebar = () => {
 };
 
 export default function AdminLayout({ children }) {
+    const [pendingWithdrawals, setPendingWithdrawals] = React.useState([]);
+    const [isNotifOpen, setIsNotifOpen] = React.useState(false);
+    const navigate = useNavigate();
+
+    React.useEffect(() => {
+        const q = query(collection(db, 'withdrawals'), where('status', '==', 'Pending'));
+        const unsubscribe = onSnapshot(q, (snap) => {
+            setPendingWithdrawals(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        return () => unsubscribe();
+    }, []);
+
     return (
         <div style={{ minHeight: '100vh', background: '#f4f6f7' }}>
             <Sidebar />
@@ -124,10 +138,77 @@ export default function AdminLayout({ children }) {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                        <button style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
-                            <Bell size={24} />
-                            <span style={{ position: 'absolute', top: 0, right: 0, width: '10px', height: '10px', background: 'var(--accent-secondary)', borderRadius: '50%', border: '2px solid #fff' }}></span>
-                        </button>
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '0.5rem', borderRadius: '0.75rem', transition: 'all 0.2s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'}
+                                onMouseLeave={e => !isNotifOpen && (e.currentTarget.style.background = 'transparent')}
+                            >
+                                <Bell size={24} />
+                                {pendingWithdrawals.length > 0 && (
+                                    <span style={{
+                                        position: 'absolute', top: '4px', right: '4px',
+                                        width: '16px', height: '16px', background: '#ef4444',
+                                        borderRadius: '50%', border: '2px solid #fff',
+                                        fontSize: '9px', color: '#fff', fontWeight: 900,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        {pendingWithdrawals.length}
+                                    </span>
+                                )}
+                            </button>
+
+                            {isNotifOpen && (
+                                <>
+                                    <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setIsNotifOpen(false)}></div>
+                                    <div style={{
+                                        position: 'absolute', top: '120%', right: 0, width: '320px',
+                                        background: '#fff', borderRadius: '1.25rem', border: '1px solid #e6e9ed',
+                                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)', zIndex: 100, overflow: 'hidden',
+                                        animation: 'dropdown-in 0.2s ease-out'
+                                    }}>
+                                        <div style={{ padding: '1.25rem', borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <h4 style={{ fontSize: '0.9rem', fontWeight: 900 }}>Alertas de Sistema</h4>
+                                        </div>
+                                        <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                                            {pendingWithdrawals.length === 0 ? (
+                                                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-dim)' }}>
+                                                    <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>No hay retiros pendientes</p>
+                                                </div>
+                                            ) : (
+                                                pendingWithdrawals.map(req => (
+                                                    <div
+                                                        key={req.id}
+                                                        onClick={() => {
+                                                            navigate('/withdrawals');
+                                                            setIsNotifOpen(false);
+                                                        }}
+                                                        style={{ padding: '1rem', borderBottom: '1px solid #f9fafb', cursor: 'pointer', transition: 'background 0.2s' }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = '#fcfdfe'}
+                                                    >
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                            <p style={{ fontSize: '0.8rem', fontWeight: 900 }}>Solicitud de Retiro</p>
+                                                            <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--accent-primary)' }}>${req.amount}</p>
+                                                        </div>
+                                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '4px' }}>{req.userEmail}</p>
+                                                        <p style={{ fontSize: '9px', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 900 }}>Vía {req.method}</p>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                        {pendingWithdrawals.length > 0 && (
+                                            <div
+                                                onClick={() => { navigate('/withdrawals'); setIsNotifOpen(false); }}
+                                                style={{ padding: '1rem', background: '#f8f9fa', textAlign: 'center', fontSize: '10px', fontWeight: 900, cursor: 'pointer', color: 'var(--accent-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                                            >
+                                                Ver todas las solicitudes
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '2rem', borderLeft: '1px solid #f0f2f5' }}>
                             <div style={{ textAlign: 'right' }}>
@@ -153,6 +234,12 @@ export default function AdminLayout({ children }) {
                     </div>
                 </section>
             </main>
+            <style>{`
+                @keyframes dropdown-in {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 }
