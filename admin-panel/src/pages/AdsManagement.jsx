@@ -64,8 +64,8 @@ export default function AdsManagement() {
             setShowModal(false);
             setForm({ title: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
         } catch (error) {
-            console.error(error);
-            alert("Error al guardar campaña.");
+            console.error("Error completo de Firebase:", error);
+            alert(`Error al guardar campaña: ${error.message || 'Verifica tus permisos de administrador.'}`);
         }
     };
 
