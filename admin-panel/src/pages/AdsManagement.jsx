@@ -23,7 +23,16 @@ export default function AdsManagement() {
     const [ads, setAds] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const [form, setForm] = useState({ title: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
+    const [form, setForm] = useState({
+        title: '',
+        description: 'Ver el sitio para recibir tu recompensa',
+        logoUrl: '',
+        url: '',
+        reward: '',
+        timer: '',
+        maxViews: '',
+        cooldown: '24'
+    });
 
     useEffect(() => {
         const fetchAds = async () => {
@@ -45,6 +54,8 @@ export default function AdsManagement() {
         try {
             const docRef = await addDoc(collection(db, 'ads'), {
                 title: form.title,
+                description: form.description,
+                logoUrl: form.logoUrl,
                 url: form.url,
                 reward: parseFloat(form.reward),
                 timer: parseInt(form.timer),
@@ -57,12 +68,11 @@ export default function AdsManagement() {
             });
             setAds([{
                 id: docRef.id,
-                title: form.title, url: form.url, reward: form.reward, timer: form.timer,
-                maxViews: form.maxViews, cooldown: form.cooldown,
+                ...form,
                 views: 0, clicks: 0, status: 'Active'
             }, ...ads]);
             setShowModal(false);
-            setForm({ title: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
+            setForm({ title: '', description: 'Ver el sitio para recibir tu recompensa', logoUrl: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
         } catch (error) {
             console.error("Error completo de Firebase:", error);
             alert(`Error al guardar campaña: ${error.message || 'Verifica tus permisos de administrador.'}`);
@@ -192,9 +202,19 @@ export default function AdsManagement() {
                     <div style={{ ...cardStyle, width: '100%', maxWidth: '600px', padding: '3rem', position: 'relative' }}>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '2.5rem' }}>Configurar Nueva Campaña</h2>
                         <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Nombre Público</label>
+                                    <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required type="text" placeholder="Ej: Video Tutorial" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>URL del Logo (Opcional)</label>
+                                    <input value={form.logoUrl} onChange={e => setForm({ ...form, logoUrl: e.target.value })} type="text" placeholder="https://..." style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                </div>
+                            </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Nombre Público de la Campaña</label>
-                                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required type="text" placeholder="Ej: Video Tutorial AdShare" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
+                                <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Texto de la Notificación</label>
+                                <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required type="text" placeholder="¿Ver sitio y ganar recompensa?" style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: '#f8f9fa', fontSize: '1rem', fontWeight: 700, outline: 'none' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Enlace de Destino (URL)</label>

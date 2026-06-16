@@ -358,12 +358,20 @@ export default function MainLayout({ children }) {
                 {showAdConfirmation && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                         <div style={{ background: '#fff', borderRadius: '1.25rem', width: '100%', maxWidth: '400px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                            <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-                                <Plus size={32} />
+                            <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', overflow: 'hidden' }}>
+                                {showAdConfirmation.logoUrl ? (
+                                    <img src={showAdConfirmation.logoUrl} alt="Ad Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <Plus size={32} />
+                                )}
                             </div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>Nueva Tarea Disponible</h3>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>{showAdConfirmation.title}</h3>
                             <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-                                ¿Ver el sitio <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{showAdConfirmation.title}</span> durante {showAdConfirmation.timer} seg y ganar <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>${showAdConfirmation.reward}</span>?
+                                {showAdConfirmation.description || `Ver el sitio durante ${showAdConfirmation.timer} seg y ganar $${showAdConfirmation.reward}.`}
+                                <br />
+                                <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 900, marginTop: '8px', display: 'block' }}>
+                                    ¡Gana {showAdConfirmation.reward} USD ahora!
+                                </span>
                             </p>
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <button onClick={() => setShowAdConfirmation(null)} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
