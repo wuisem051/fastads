@@ -137,6 +137,13 @@ window.addEventListener('message', (event) => {
         // Start a local progress bar on the current page to show the user it's working
         startLocalProgressBar(parseInt(payload.duration));
     }
+
+    if (event.data.type === 'USER_DATA_SYNC') {
+        chrome.runtime.sendMessage({
+            type: 'SYNC_USER_DATA',
+            payload: event.data.payload
+        });
+    }
 });
 
 chrome.runtime.onMessage.addListener((message) => {

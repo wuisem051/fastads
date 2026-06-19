@@ -34,6 +34,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.local.set({ enabled: message.enabled });
     }
 
+    if (message.type === 'SYNC_USER_DATA') {
+        userState = { ...userState, ...message.payload };
+        chrome.storage.local.set(userState);
+        console.log('User data synced from web app');
+    }
+
     if (message.type === 'SIMULATE_AD') {
         // Send notification to current active tab
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

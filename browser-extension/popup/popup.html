@@ -212,18 +212,18 @@
 <body>
     <header>
         <span class="version">ver 1.0.0</span>
-        <div class="logo">TEASE <span>P</span> FAST</div>
+        <div class="logo">FAST<span style="color: var(--accent-green)">ADS</span> <span style="font-size: 0.9em">⚡</span></div>
     </header>
 
     <div class="section-header">CUENTA</div>
 
     <div class="user-info">
-        <div class="avatar">
-            <img src="https://ui-avatars.com/api/?name=Wuisem&background=0D8ABC&color=fff" alt="Avatar">
+        <div class="avatar" id="avatar-container">
+            <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" id="user-avatar" alt="Avatar">
         </div>
         <div class="user-details">
-            <h3>Wuisem</h3>
-            <p>Balance: <span class="balance-val" id="balance">0.00 USD</span></p>
+            <h3 id="user-name">Usuario</h3>
+            <p>Balance: <span class="balance-val" id="balance">0.0000 USD</span></p>
         </div>
     </div>
 
@@ -236,7 +236,7 @@
     <ul class="stats-list">
         <li class="stat-item">
             <span>Ganado:</span>
-            <span class="stat-val" id="today-earned">0.000 USD</span>
+            <span class="stat-val" id="today-earned">0.0000 USD</span>
         </li>
         <li class="stat-item">
             <span>Téasers vistos:</span>

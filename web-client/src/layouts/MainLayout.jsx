@@ -98,6 +98,20 @@ export default function MainLayout({ children }) {
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [showAdConfirmation, setShowAdConfirmation] = useState(null);
     const navigate = useNavigate();
+    // Sync balance with Extension
+    useEffect(() => {
+        if (userProfile) {
+            window.postMessage({
+                type: 'USER_DATA_SYNC',
+                payload: {
+                    balance: userProfile.balance || 0,
+                    displayName: userProfile.displayName || currentUser?.displayName,
+                    photoURL: userProfile.photoURL || `https://ui-avatars.com/api/?name=${userProfile.displayName || 'User'}&background=0D8ABC&color=fff`,
+                    adsViewed: userProfile.adsWatched || 0
+                }
+            }, '*');
+        }
+    }, [userProfile]);
 
     // Global Ad Checker
     useEffect(() => {
@@ -105,17 +119,20 @@ export default function MainLayout({ children }) {
 
         const checkAds = async () => {
             try {
-                const adsSnap = await getDocs(query(collection(db, 'ads'), where('status', '==', 'Active')));
-                const allAds = adsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                // Using the robust query logic from Dashboard
+                const adsSnap = await getDocs(collection(db, 'ads'));
+                const allAds = adsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .filter(ad => ad.status === 'Active' || ad.status === 'active');
 
-                const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
                 const transSnap = await getDocs(query(
                     collection(db, 'transactions'),
                     where('userId', '==', currentUser.uid),
-                    where('type', '==', 'ad_view'),
-                    where('createdAt', '>=', twoDaysAgo)
+                    where('type', '==', 'ad_view')
                 ));
-                const userHistory = transSnap.docs.map(d => d.data());
+
+                const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
+                const userHistory = transSnap.docs.map(d => d.data())
+                    .filter(h => h.createdAt?.toMillis() > twoDaysAgo);
 
                 const filtered = allAds.filter(ad => {
                     if (ad.maxViews && (ad.clicks || 0) >= ad.maxViews) return false;

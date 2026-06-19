@@ -9,12 +9,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleText = document.getElementById('toggle-text');
     const dashboardBtn = document.getElementById('go-to-dashboard');
 
+    const nameEl = document.getElementById('user-name');
+    const avatarEl = document.getElementById('user-avatar');
+
     // Load state from extension storage
-    chrome.storage.local.get(['balance', 'todayEarned', 'adsViewed', 'enabled'], (data) => {
-        balanceEl.textContent = `${(data.balance || 0).toFixed(2)} USD`;
-        todayEarnedEl.textContent = `${(data.todayEarned || 0).toFixed(3)} USD`;
+    chrome.storage.local.get(['balance', 'todayEarned', 'adsViewed', 'enabled', 'displayName', 'photoURL'], (data) => {
+        balanceEl.textContent = `${(data.balance || 0).toFixed(4)} USD`;
+        todayEarnedEl.textContent = `${(data.todayEarned || 0).toFixed(4)} USD`;
         teasersViewedEl.textContent = data.adsViewed || 0;
         popupsViewedEl.textContent = data.popupsViewed || 0;
+
+        if (data.displayName) nameEl.textContent = data.displayName;
+        if (data.photoURL) avatarEl.src = data.photoURL;
 
         const isEnabled = data.enabled !== false;
         adToggle.checked = isEnabled;
