@@ -45,15 +45,38 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => signOut(auth);
 
-    const fetchProfile = async (uid) => {
-        const snap = await getDoc(doc(db, 'users', uid));
-        if (snap.exists()) setUserProfile(snap.data());
+    const fetchProfile = async (uid, user) => {
+        const docRef = doc(db, 'users', uid);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+            setUserProfile(snap.data());
+        } else {
+            console.log("Perfil faltante detected. Auto-creando...");
+            const newProfile = {
+                uid: uid,
+                displayName: user.displayName || 'Usuario',
+                email: user.email,
+                balance: 0,
+                totalEarnings: 0,
+                adsWatched: 0,
+                referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+                createdAt: serverTimestamp(),
+                role: 'user',
+                status: 'Active'
+            };
+            try {
+                await setDoc(docRef, newProfile);
+                setUserProfile(newProfile);
+            } catch (e) {
+                console.error("Error auto-creando perfil:", e);
+            }
+        }
     };
 
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (user) => {
             setCurrentUser(user);
-            if (user) await fetchProfile(user.uid);
+            if (user) await fetchProfile(user.uid, user);
             else setUserProfile(null);
             setLoading(false);
         });
