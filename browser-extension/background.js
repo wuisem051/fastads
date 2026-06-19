@@ -130,13 +130,17 @@ function rewardUser(amount, adId) {
         chrome.runtime.sendMessage({ type: 'UPDATE_UI', data: userState });
 
         // System notification
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'icons/icon128.png',
-            title: '¡Pago Acreditado!',
-            message: `Has recibido $${amount.toFixed(4)} correctamente.`,
-            priority: 2
-        });
+        try {
+            chrome.notifications.create({
+                type: 'basic',
+                iconUrl: '/icons/icon128.png',
+                title: '¡Pago Acreditado!',
+                message: `Has recibido $${amount.toFixed(4)} correctamente.`,
+                priority: 2
+            });
+        } catch (e) {
+            console.error("Notification error:", e);
+        }
 
         // Opcional: Aquí se debería llamar a una API o a Firebase directamente 
         // para persistir el cambio en la base de datos central.
