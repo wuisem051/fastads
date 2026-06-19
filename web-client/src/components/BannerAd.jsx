@@ -76,13 +76,10 @@ export default function BannerAd({ adData, onClose, onComplete }) {
 
         } catch (err) {
             console.error("Error en acreditación:", err);
-            let userMsg = "Error en el servidor. Intenta de nuevo.";
-            if (err.code === 'permission-denied') userMsg = "Permiso denegado por Firebase. Revisa las reglas.";
-            if (err.message.includes("logueado")) userMsg = err.message;
-
-            setError(userMsg);
+            const errorDetail = `Código: ${err.code || 'n/a'} - Mensaje: ${err.message || 'Error desconocido'}`;
+            setError(`Error: ${err.code}`);
             setStatus('waiting');
-            alert(userMsg); // Force notice if it hangs
+            alert(`Fallo en el servidor de Firebase:\n\n${errorDetail}\n\nPor favor, verifica la consola de Firebase.`);
         }
     };
 
