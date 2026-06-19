@@ -35,17 +35,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === 'SYNC_USER_DATA') {
-        const incoming = message.payload;
-        // Optimization: Keep the higher balance if we have background earnings not yet in DB
-        // But respect the DB if it's a significant update (e.g. withdrawal)
-        // For now, let's just merge and ensure we don't lose local progress
-        userState.balance = Math.max(userState.balance, incoming.balance || 0);
-        userState.adsViewed = Math.max(userState.adsViewed, incoming.adsViewed || 0);
-        userState.displayName = incoming.displayName || userState.displayName;
-        userState.photoURL = incoming.photoURL || userState.photoURL;
-
+        const payload = message.payload || {};
+        userState.balance = Math.max(userState.balance || 0, payload.balance || 0);
+        userState.adsViewed = Math.max(userState.adsViewed || 0, payload.adsViewed || 0);
+        if (payload.displayName) userState.displayName = payload.displayName;
+        if (payload.photoURL) userState.photoURL = payload.photoURL;
         chrome.storage.local.set(userState);
-        console.log('User data synced (merged) from web app');
     }
 
     if (message.type === 'SIMULATE_AD') {
