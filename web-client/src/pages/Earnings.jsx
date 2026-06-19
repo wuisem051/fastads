@@ -62,7 +62,7 @@ export default function Earnings() {
                 </div>
                 <div style={{ ...card, padding: '1rem 1.5rem', borderRadius: '1.25rem' }}>
                     <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '4px' }}>Total Vitalicio</p>
-                    <p className="font-digital" style={{ fontSize: '1.1rem' }}>${totalVitalicio.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                    <p className="font-digital" style={{ fontSize: '1.1rem' }}>${totalVitalicio.toLocaleString('en-US', { minimumFractionDigits: 4 })}</p>
                 </div>
             </div>
 

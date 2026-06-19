@@ -160,7 +160,7 @@ export default function Dashboard() {
     const referrals = userProfile?.referrals ?? 0;
 
     const formatCurrency = (val) =>
-        `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
 
     const timeAgo = (ts) => {
         if (!ts) return '';

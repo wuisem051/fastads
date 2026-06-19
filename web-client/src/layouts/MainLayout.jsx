@@ -205,7 +205,7 @@ export default function MainLayout({ children }) {
                         <div style={{ display: 'flex', gap: '1.5rem', paddingRight: '2rem', borderRight: '1px solid #f0f2f5' }}>
                             <div style={{ textAlign: 'center' }}>
                                 <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '3px' }}>BALANCE</p>
-                                <p className="font-digital" style={{ fontSize: '0.85rem', color: 'var(--accent-secondary)' }}>$ {Number(useAuth().userProfile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                                <p className="font-digital" style={{ fontSize: '0.85rem', color: 'var(--accent-secondary)' }}>$ {Number(useAuth().userProfile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 4 })}</p>
                             </div>
                         </div>
 

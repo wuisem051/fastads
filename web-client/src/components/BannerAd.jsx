@@ -11,6 +11,16 @@ export default function BannerAd({ adData, onClose, onComplete }) {
     const [status, setStatus] = useState('waiting'); // waiting => success
     const [error, setError] = useState('');
 
+    // Impression tracking (increment views when shown)
+    useEffect(() => {
+        if (adData?.id) {
+            const adRef = doc(db, 'ads', adData.id);
+            updateDoc(adRef, {
+                views: increment(1)
+            }).catch(err => console.error("Error tracking impression:", err));
+        }
+    }, [adData?.id]);
+
     // Countdown timer logic
     useEffect(() => {
         if (status !== 'waiting') return;
