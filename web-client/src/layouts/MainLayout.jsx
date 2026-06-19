@@ -100,18 +100,27 @@ export default function MainLayout({ children }) {
     const navigate = useNavigate();
     // Sync balance with Extension
     useEffect(() => {
-        if (userProfile) {
-            window.postMessage({
+        if (userProfile && currentUser) {
+            const syncData = {
                 type: 'USER_DATA_SYNC',
                 payload: {
+                    uid: currentUser.uid,
                     balance: userProfile.balance || 0,
-                    displayName: userProfile.displayName || currentUser?.displayName,
-                    photoURL: userProfile.photoURL || `https://ui-avatars.com/api/?name=${userProfile.displayName || 'User'}&background=0D8ABC&color=fff`,
+                    totalEarnings: userProfile.totalEarnings || 0,
+                    displayName: userProfile.displayName || currentUser?.displayName || 'Usuario',
+                    photoURL: userProfile.photoURL || `https://ui-avatars.com/api/?name=${userProfile.displayName || currentUser?.displayName || 'User'}&background=0D8ABC&color=fff`,
                     adsViewed: userProfile.adsWatched || 0
                 }
-            }, '*');
+            };
+            window.postMessage(syncData, '*');
+
+            // Optional: Backup broadcast in case postMessage is missed during load
+            const timeout = setTimeout(() => {
+                window.postMessage(syncData, '*');
+            }, 2000);
+            return () => clearTimeout(timeout);
         }
-    }, [userProfile]);
+    }, [userProfile, currentUser]);
 
     // Global Ad Checker
     useEffect(() => {
@@ -287,8 +296,13 @@ export default function MainLayout({ children }) {
                                 onMouseLeave={e => !isProfileOpen && (e.currentTarget.style.background = 'transparent')}
                             >
                                 <div style={{ textAlign: 'right' }}>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-primary)' }}>Wuisem <ChevronDown size={14} style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /></p>
-                                    <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)' }}>Pro Member</p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                                        {userProfile?.displayName || currentUser?.displayName || 'Usuario'}
+                                        <ChevronDown size={14} style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                                    </p>
+                                    <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)' }}>
+                                        {userProfile?.role === 'admin' ? 'Admin Master' : 'Pro Member'}
+                                    </p>
                                 </div>
                                 <div style={{
                                     width: '2.5rem', height: '2.5rem', borderRadius: '50%',
@@ -296,7 +310,14 @@ export default function MainLayout({ children }) {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     color: '#fff', fontWeight: 900, fontSize: '1rem',
                                     border: '2px solid rgba(0,160,233,0.1)',
-                                }}>W</div>
+                                    overflow: 'hidden'
+                                }}>
+                                    {userProfile?.photoURL || currentUser?.photoURL ? (
+                                        <img src={userProfile?.photoURL || currentUser?.photoURL} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        (userProfile?.displayName || currentUser?.displayName || 'U').charAt(0).toUpperCase()
+                                    )}
+                                </div>
                             </div>
 
                             {/* Dropdown Menu */}

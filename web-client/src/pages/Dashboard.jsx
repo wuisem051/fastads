@@ -156,7 +156,8 @@ export default function Dashboard() {
     const displayName = userProfile?.displayName || currentUser?.displayName || 'Usuario';
     const balance = userProfile?.balance ?? 0;
     const adsWatched = userProfile?.adsWatched ?? 0;
-    const totalEarnings = userProfile?.totalEarnings ?? 0;
+    // Fallback for older accounts that might not have totalEarnings field yet
+    const totalEarnings = Math.max(userProfile?.totalEarnings || 0, userProfile?.balance || 0);
     const referrals = userProfile?.referrals ?? 0;
 
     const formatCurrency = (val) =>
