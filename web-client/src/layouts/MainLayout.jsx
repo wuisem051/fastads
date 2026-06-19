@@ -167,6 +167,46 @@ export default function MainLayout({ children }) {
     // Global Extension Listener
     useEffect(() => {
         const handleExtensionMessage = async (event) => {
+            // Extension says it's ready, so we send our current user data
+            if (event.data.type === 'EXTENSION_READY') {
+                if (userProfile && currentUser) {
+                    // Sync our truth to extension
+                    window.postMessage({
+                        type: 'USER_DATA_SYNC',
+                        payload: {
+                            uid: currentUser.uid,
+                            balance: userProfile.balance || 0,
+                            totalEarnings: userProfile.totalEarnings || 0,
+                            displayName: userProfile.displayName || currentUser?.displayName || 'Usuario',
+                            photoURL: userProfile.photoURL || `https://ui-avatars.com/api/?name=${userProfile.displayName || currentUser?.displayName || 'User'}&background=0D8ABC&color=fff`,
+                            adsViewed: userProfile.adsWatched || 0
+                        }
+                    }, '*');
+
+                    // If extension has MORE balance than us, it means some ads were watched while offline/background
+                    // We reconcile if the difference is positive.
+                    const extBalance = event.data.localBalance || 0;
+                    const dbBalance = userProfile.balance || 0;
+                    if (extBalance > dbBalance) {
+                        const diff = extBalance - dbBalance;
+                        console.log(`Reconciling: Extension has $${extBalance}, DB has $${dbBalance}. Syncing $${diff}`);
+                        try {
+                            await updateDoc(doc(db, 'users', currentUser.uid), {
+                                balance: increment(diff),
+                                totalEarnings: increment(diff)
+                            });
+                            await addDoc(collection(db, 'transactions'), {
+                                userId: currentUser.uid, type: 'ad_view', amount: diff,
+                                description: 'Sincronización de ganancias de extensión', platform: 'EXTENSION_SYNC',
+                                createdAt: serverTimestamp()
+                            });
+                            // Reload to show new balance
+                            window.location.reload();
+                        } catch (e) { console.error("Sync error:", e); }
+                    }
+                }
+            }
+
             if (event.data.type === 'AD_COMPLETED_SUCCESS') {
                 const { adId, reward, title } = event.data.payload;
                 try {
@@ -175,22 +215,23 @@ export default function MainLayout({ children }) {
                         totalEarnings: increment(reward),
                         adsWatched: increment(1)
                     });
-                    await updateDoc(doc(db, 'ads', adId), { clicks: increment(1) });
+                    if (adId) await updateDoc(doc(db, 'ads', adId), { clicks: increment(1) });
                     await addDoc(collection(db, 'transactions'), {
-                        userId: currentUser.uid, adId, type: 'ad_view', amount: reward,
-                        description: title || 'Anuncio completado', platform: 'AUTO_POP',
+                        userId: currentUser.uid, adId: adId || 'ext_auto', type: 'ad_view', amount: reward,
+                        description: title || 'Anuncio completado (Ext)', platform: 'EXTENSION',
                         createdAt: serverTimestamp()
                     });
+                    // Refresh profile after update
                     window.location.reload();
                 } catch (err) { console.error(err); }
             }
             if (event.data.type === 'AD_CANCELLED') {
-                alert("Anuncio cancelado. Mantén la pestaña abierta.");
+                // Silent
             }
         };
         window.addEventListener('message', handleExtensionMessage);
         return () => window.removeEventListener('message', handleExtensionMessage);
-    }, [currentUser]);
+    }, [currentUser, userProfile]);
 
     const dropdownItems = [
         { icon: <PlusCircle size={16} />, label: 'Ordenar publicidad', path: '/ads' },

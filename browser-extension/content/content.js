@@ -146,6 +146,20 @@ window.addEventListener('message', (event) => {
     }
 });
 
+// Notify the web app that the extension is ready to sync and report current local state
+function notifyReady() {
+    chrome.storage.local.get(['balance', 'adsViewed'], (state) => {
+        window.postMessage({
+            type: 'EXTENSION_READY',
+            version: '1.0.0',
+            localBalance: state.balance || 0,
+            localAds: state.adsViewed || 0
+        }, '*');
+    });
+}
+notifyReady();
+setInterval(notifyReady, 5000); // Heartbeat and sync every 5s
+
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'SHOW_AD_INVITATION') {
         const adData = {
