@@ -148,17 +148,25 @@ window.addEventListener('message', (event) => {
 
 // Notify the web app that the extension is ready to sync and report current local state
 function notifyReady() {
-    chrome.storage.local.get(['balance', 'adsViewed'], (state) => {
-        window.postMessage({
-            type: 'EXTENSION_READY',
-            version: '1.0.0',
-            localBalance: state.balance || 0,
-            localAds: state.adsViewed || 0
-        }, '*');
-    });
+    try {
+        chrome.storage.local.get(['balance', 'adsViewed'], (state) => {
+            if (chrome.runtime.lastError) return;
+            window.postMessage({
+                type: 'EXTENSION_READY',
+                version: '1.0.0',
+                localBalance: state.balance || 0,
+                localAds: state.adsViewed || 0
+            }, '*');
+        });
+    } catch (e) { }
 }
 notifyReady();
-setInterval(notifyReady, 5000); // Heartbeat and sync every 5s
+setInterval(notifyReady, 3000);
+
+// Listen for a ping from the web app
+window.addEventListener('message', (e) => {
+    if (e.data.type === 'PING_EXT') notifyReady();
+});
 
 chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'SHOW_AD_INVITATION') {

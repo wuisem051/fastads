@@ -101,26 +101,26 @@ export default function MainLayout({ children }) {
     const navigate = useNavigate();
     // Sync balance with Extension
     useEffect(() => {
-        if (userProfile && currentUser) {
-            const syncData = {
-                type: 'USER_DATA_SYNC',
-                payload: {
-                    uid: currentUser.uid,
-                    balance: userProfile.balance || 0,
-                    totalEarnings: userProfile.totalEarnings || 0,
-                    displayName: userProfile.displayName || currentUser?.displayName || 'Usuario',
-                    photoURL: userProfile.photoURL || `https://ui-avatars.com/api/?name=${userProfile.displayName || currentUser?.displayName || 'User'}&background=0D8ABC&color=fff`,
-                    adsViewed: userProfile.adsWatched || 0
-                }
-            };
-            window.postMessage(syncData, '*');
-
-            // Optional: Backup broadcast in case postMessage is missed during load
-            const timeout = setTimeout(() => {
-                window.postMessage(syncData, '*');
-            }, 2000);
-            return () => clearTimeout(timeout);
-        }
+        const sync = () => {
+            if (userProfile && currentUser) {
+                window.postMessage({
+                    type: 'USER_DATA_SYNC',
+                    payload: {
+                        uid: currentUser.uid,
+                        balance: userProfile.balance || 0,
+                        totalEarnings: userProfile.totalEarnings || 0,
+                        displayName: userProfile.displayName || currentUser?.displayName || 'Usuario',
+                        photoURL: userProfile.photoURL || `https://ui-avatars.com/api/?name=${userProfile.displayName || currentUser?.displayName || 'User'}&background=0D8ABC&color=fff`,
+                        adsViewed: userProfile.adsWatched || 0
+                    }
+                }, '*');
+                // Active ping to content script
+                window.postMessage({ type: 'PING_EXT' }, '*');
+            }
+        };
+        sync();
+        const interval = setInterval(sync, 4000);
+        return () => clearInterval(interval);
     }, [userProfile, currentUser]);
 
     // Global Ad Checker
