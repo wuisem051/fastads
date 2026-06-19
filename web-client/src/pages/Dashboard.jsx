@@ -8,8 +8,10 @@ import {
     Plus,
     TrendingUp,
     Download,
-    Inbox
+    Inbox,
+    Bell
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -61,26 +63,31 @@ export default function Dashboard() {
     const [loadingAds, setLoadingAds] = useState(true);
     const [showAdConfirmation, setShowAdConfirmation] = useState(null);
     const [showAd, setShowAd] = useState(null);
+    const [showInvitation, setShowInvitation] = useState(null);
 
     useEffect(() => {
         if (!currentUser) return;
 
         const fetchAdsData = async () => {
             try {
-                // 1. Fetch active ads
-                const adsSnap = await getDocs(query(collection(db, 'ads'), where('status', '==', 'Active')));
-                const allAds = adsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                // 1. Fetch active ads (fetching all for robustness, then filtering in JS)
+                const adsSnap = await getDocs(collection(db, 'ads'));
+                const allAds = adsSnap.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .filter(ad => ad.status === 'Active' || ad.status === 'active');
 
-                // 2. Fetch user's recent ad history to check cooldowns
-                // We'll look at transactions from the last 48h to be safe
-                const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+                // 2. Fetch user's recent ad history
+                // Simplify query to avoid composite index requirements
                 const transSnap = await getDocs(query(
                     collection(db, 'transactions'),
                     where('userId', '==', currentUser.uid),
-                    where('type', '==', 'ad_view'),
-                    where('createdAt', '>=', twoDaysAgo)
+                    where('type', '==', 'ad_view')
                 ));
-                const userHistory = transSnap.docs.map(d => d.data());
+
+                const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
+                const userHistory = transSnap.docs
+                    .map(d => d.data())
+                    .filter(h => h.createdAt?.toMillis() > twoDaysAgo);
 
                 // 3. Filter ads
                 const filtered = allAds.filter(ad => {
@@ -101,11 +108,6 @@ export default function Dashboard() {
                 });
 
                 setAvailableAds(filtered);
-
-                // Automatically show confirmation for the first available ad if none is showing
-                if (filtered.length > 0 && !showAd && !showAdConfirmation) {
-                    setShowAdConfirmation(filtered[0]);
-                }
             } catch (error) {
                 console.error("Error loading ads:", error);
             } finally {
@@ -116,7 +118,19 @@ export default function Dashboard() {
         fetchAdsData();
     }, [currentUser]);
 
+    // Logic for random invitation
+    useEffect(() => {
+        if (availableAds.length === 0 || showInvitation || showAd) return;
 
+        // Set a random timer between 15 and 60 seconds
+        const randomTime = Math.floor(Math.random() * (60000 - 15000 + 1)) + 15000;
+
+        const timer = setTimeout(() => {
+            setShowInvitation(availableAds[0]);
+        }, randomTime);
+
+        return () => clearTimeout(timer);
+    }, [availableAds, showInvitation, showAd]);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -246,14 +260,95 @@ export default function Dashboard() {
                             <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-dim)' }}>
                                 {loadingAds ? 'Buscando tareas...' : availableAds.length > 0 ? '¡Un anuncio está activo!' : 'No hay tareas disponibles por ahora.'}
                             </p>
+                            {availableAds.length > 0 && !showAd && !showInvitation && (
+                                <button
+                                    onClick={() => setShowInvitation(availableAds[0])}
+                                    style={{
+                                        marginTop: '1rem',
+                                        padding: '0.75rem 1.5rem',
+                                        borderRadius: '1rem',
+                                        background: 'linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        fontWeight: 900,
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(0,160,233,0.2)'
+                                    }}
+                                >
+                                    VER ANUNCIO
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
 
+            {/* Invitation Popup */}
+            <AnimatePresence>
+                {showInvitation && (
+                    <motion.div
+                        initial={{ opacity: 0, x: 100, scale: 0.8 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, x: 100, scale: 0.8 }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '2rem',
+                            right: '2rem',
+                            zIndex: 10000,
+                            width: '320px',
+                            background: '#fff',
+                            borderRadius: '1.5rem',
+                            padding: '1.5rem',
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                            border: '1px solid #e1e4e8',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1rem'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ padding: '0.5rem', borderRadius: '0.75rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)' }}>
+                                <Bell size={20} />
+                            </div>
+                            <h4 style={{ fontWeight: 900, fontSize: '0.9rem', margin: 0 }}>¡Nueva Tarea Disponible!</h4>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+                            Hay una campaña activa: <b>"{showInvitation.title}"</b>. Mírala ahora para ganar tu recompensa.
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button
+                                onClick={() => setShowInvitation(null)}
+                                style={{ flex: 1, padding: '0.625rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                                Ignorar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowAd(showInvitation);
+                                    setShowInvitation(null);
+                                }}
+                                style={{ flex: 2, padding: '0.625rem', borderRadius: '0.75rem', background: 'var(--accent-secondary)', color: '#fff', border: 'none', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer' }}
+                            >
+                                VER AHORA
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {/* BannerAd removed from here as per user request to use Extension counter */}
+            {/* BannerAd modal */}
+            {showAd && (
+                <BannerAd
+                    adData={showAd}
+                    onClose={() => setShowAd(null)}
+                    onComplete={() => {
+                        setShowAd(null);
+                        // Optional: refresh data or show success
+                    }}
+                />
+            )}
         </div>
     );
 }

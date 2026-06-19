@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function BannerAd({ adData, onClose, onComplete }) {
     const { currentUser } = useAuth();
-    const [timeLeft, setTimeLeft] = useState(adData?.duration || 15);
+    const [timeLeft, setTimeLeft] = useState(adData?.timer || 15);
     const [status, setStatus] = useState('waiting'); // waiting => success
     const [error, setError] = useState('');
 
@@ -72,6 +72,9 @@ export default function BannerAd({ adData, onClose, onComplete }) {
 
     if (!adData) return null;
 
+    const adUrl = adData.url || adData.targetUrl;
+    const adImage = adData.logoUrl || adData.imageUrl;
+
     return (
         <AnimatePresence>
             <motion.div
@@ -130,10 +133,10 @@ export default function BannerAd({ adData, onClose, onComplete }) {
                 {/* Content Body */}
                 <div style={{ padding: '1.25rem', display: 'flex', gap: '1rem', background: '#fafafa' }}>
                     {/* Thumbnail Image */}
-                    {adData.imageUrl && (
+                    {adImage && (
                         <div style={{ flexShrink: 0 }}>
                             <img
-                                src={adData.imageUrl}
+                                src={adImage}
                                 alt="Ad thumbnail"
                                 style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '0.5rem', border: '1px solid #e1e4e8' }}
                             />
@@ -143,7 +146,7 @@ export default function BannerAd({ adData, onClose, onComplete }) {
                     {/* Ad Info */}
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.5rem' }}>
                         <a
-                            href={adData.targetUrl}
+                            href={adUrl}
                             target="_blank"
                             rel="noreferrer"
                             style={{ color: '#2563eb', fontWeight: 700, fontSize: '1rem', textDecoration: 'none', lineHeight: 1.2 }}
@@ -156,7 +159,7 @@ export default function BannerAd({ adData, onClose, onComplete }) {
                         </p>
 
                         <a
-                            href={adData.targetUrl}
+                            href={adUrl}
                             target="_blank"
                             rel="noreferrer"
                             style={{
