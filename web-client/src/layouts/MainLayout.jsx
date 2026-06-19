@@ -186,45 +186,57 @@ export default function MainLayout({ children }) {
 
                     // If extension has MORE balance than us, it means some ads were watched while offline/background
                     // We reconcile if the difference is positive.
-                    const extBalance = event.data.localBalance || 0;
-                    const dbBalance = userProfile.balance || 0;
-                    if (extBalance > dbBalance) {
+                    const extBalance = parseFloat(event.data.localBalance || 0);
+                    const dbBalance = parseFloat(userProfile.balance || 0);
+
+                    if (extBalance > dbBalance + 0.00001) { // Use epsilon for float comparison
                         const diff = extBalance - dbBalance;
-                        console.log(`Reconciling: Extension has $${extBalance}, DB has $${dbBalance}. Syncing $${diff}`);
+                        console.log(`Reconciliando saldo: Extensión tiene $${extBalance}, DB tiene $${dbBalance}. Diferencia: $${diff}`);
                         try {
-                            await updateDoc(doc(db, 'users', currentUser.uid), {
+                            const userRef = doc(db, 'users', currentUser.uid);
+                            await updateDoc(userRef, {
                                 balance: increment(diff),
                                 totalEarnings: increment(diff)
                             });
                             await addDoc(collection(db, 'transactions'), {
-                                userId: currentUser.uid, type: 'ad_view', amount: diff,
-                                description: 'Sincronización de ganancias de extensión', platform: 'EXTENSION_SYNC',
+                                userId: currentUser.uid,
+                                type: 'ad_view',
+                                amount: diff,
+                                description: 'Sincronización de ganancias (Extensión)',
+                                platform: 'EXTENSION_SYNC',
                                 createdAt: serverTimestamp()
                             });
-                            // Reload to show new balance
+                            // No reload here to avoid loops, just let the snapshot update or reload once
                             window.location.reload();
-                        } catch (e) { console.error("Sync error:", e); }
+                        } catch (e) {
+                            console.error("Error síncrono:", e);
+                            if (e.code === 'permission-denied') {
+                                alert("Error perm: No tienes permisos para actualizar tu saldo en Firebase.");
+                            }
+                        }
                     }
                 }
             }
 
             if (event.data.type === 'AD_COMPLETED_SUCCESS') {
                 const { adId, reward, title } = event.data.payload;
+                const floatReward = parseFloat(reward);
                 try {
                     await updateDoc(doc(db, 'users', currentUser.uid), {
-                        balance: increment(reward),
-                        totalEarnings: increment(reward),
+                        balance: increment(floatReward),
+                        totalEarnings: increment(floatReward),
                         adsWatched: increment(1)
                     });
-                    if (adId) await updateDoc(doc(db, 'ads', adId), { clicks: increment(1) });
+                    if (adId && adId !== 'demo') {
+                        await updateDoc(doc(db, 'ads', adId), { clicks: increment(1) }).catch(() => { });
+                    }
                     await addDoc(collection(db, 'transactions'), {
-                        userId: currentUser.uid, adId: adId || 'ext_auto', type: 'ad_view', amount: reward,
+                        userId: currentUser.uid, adId: adId || 'ext_auto', type: 'ad_view', amount: floatReward,
                         description: title || 'Anuncio completado (Ext)', platform: 'EXTENSION',
                         createdAt: serverTimestamp()
                     });
-                    // Refresh profile after update
                     window.location.reload();
-                } catch (err) { console.error(err); }
+                } catch (err) { console.error("Error en AD_COMPLETED:", err); }
             }
             if (event.data.type === 'AD_CANCELLED') {
                 // Silent
