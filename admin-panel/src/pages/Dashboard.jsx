@@ -101,8 +101,8 @@ export default function Dashboard() {
     const stats = [
         { label: 'Usuarios Totales', value: loading ? '...' : statsData.users, trend: 'up', trendValue: '+Live', icon: Users, color: 'blue' },
         { label: 'Anuncios Activos', value: loading ? '...' : statsData.ads, trend: 'up', trendValue: '+Live', icon: Megaphone, color: 'purple' },
-        { label: 'Retiros Pendientes', value: loading ? '...' : `$${statsData.withdrawals.toFixed(2)}`, trend: 'down', trendValue: 'Live', icon: Wallet, color: 'yellow' },
-        { label: 'Balance Global Users', value: loading ? '...' : `$${statsData.income.toFixed(2)}`, trend: 'up', trendValue: '+Live', icon: TrendingUp, color: 'green' },
+        { label: 'Retiros Pendientes', value: loading ? '...' : `$${statsData.withdrawals.toFixed(4)}`, trend: 'down', trendValue: 'Live', icon: Wallet, color: 'yellow' },
+        { label: 'Balance Global Users', value: loading ? '...' : `$${statsData.income.toFixed(4)}`, trend: 'up', trendValue: '+Live', icon: TrendingUp, color: 'green' },
     ];
 
     return (

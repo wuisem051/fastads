@@ -22,6 +22,7 @@ export default function AdsManagement() {
     const [showModal, setShowModal] = useState(false);
     const [ads, setAds] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [editingId, setEditingId] = useState(null);
 
     const [form, setForm] = useState({
         title: '',
@@ -49,33 +50,66 @@ export default function AdsManagement() {
         fetchAds();
     }, []);
 
-    const handleCreate = async (e) => {
+    const resetForm = () => {
+        setForm({ title: '', description: 'Ver el sitio para recibir tu recompensa', logoUrl: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
+        setEditingId(null);
+    };
+
+    const handleEdit = (ad) => {
+        setForm({
+            title: ad.title || '',
+            description: ad.description || 'Ver el sitio para recibir tu recompensa',
+            logoUrl: ad.logoUrl || '',
+            url: ad.url || '',
+            reward: ad.reward || '',
+            timer: ad.timer || '',
+            maxViews: ad.maxViews || '',
+            cooldown: ad.cooldown || '24'
+        });
+        setEditingId(ad.id);
+        setShowModal(true);
+    };
+
+    const handleSave = async (e) => {
         e.preventDefault();
         try {
-            const docRef = await addDoc(collection(db, 'ads'), {
+            const adData = {
                 title: form.title,
                 description: form.description,
                 logoUrl: form.logoUrl,
                 url: form.url,
                 reward: parseFloat(form.reward),
                 timer: parseInt(form.timer),
-                views: 0,
-                clicks: 0,
-                status: 'Active',
                 maxViews: parseInt(form.maxViews) || 1000,
                 cooldown: parseInt(form.cooldown) || 24,
-                createdAt: serverTimestamp()
-            });
-            setAds([{
-                id: docRef.id,
-                ...form,
-                views: 0, clicks: 0, status: 'Active'
-            }, ...ads]);
+            };
+
+            if (editingId) {
+                // Update
+                const adRef = doc(db, 'ads', editingId);
+                await updateDoc(adRef, adData);
+                setAds(ads.map(ad => ad.id === editingId ? { ...ad, ...adData } : ad));
+            } else {
+                // Create
+                const docRef = await addDoc(collection(db, 'ads'), {
+                    ...adData,
+                    views: 0,
+                    clicks: 0,
+                    status: 'Active',
+                    createdAt: serverTimestamp()
+                });
+                setAds([{
+                    id: docRef.id,
+                    ...adData,
+                    views: 0, clicks: 0, status: 'Active'
+                }, ...ads]);
+            }
+
             setShowModal(false);
-            setForm({ title: '', description: 'Ver el sitio para recibir tu recompensa', logoUrl: '', url: '', reward: '', timer: '', maxViews: '', cooldown: '24' });
+            resetForm();
         } catch (error) {
-            console.error("Error completo de Firebase:", error);
-            alert(`Error al guardar campaña: ${error.message || 'Verifica tus permisos de administrador.'}`);
+            console.error("Error al guardar campaña:", error);
+            alert(`Error: ${error.message}`);
         }
     };
 
@@ -161,7 +195,7 @@ export default function AdsManagement() {
                                     <td style={{ padding: '1.5rem' }}>
                                         <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '8px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent-primary)', fontFamily: 'monospace' }}>${ad.reward}</span>
+                                                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--accent-primary)', fontFamily: 'monospace' }}>${Number(ad.reward || 0).toFixed(4)}</span>
                                                 <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)', background: '#f8f9fa', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e6e9ed' }}>{ad.timer}s</span>
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -184,6 +218,9 @@ export default function AdsManagement() {
                                     </td>
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                            <button onClick={() => handleEdit(ad)} style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-secondary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}>
+                                                <Edit3 size={18} />
+                                            </button>
                                             <button onClick={() => deleteAd(ad.id)} style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} onMouseEnter={e => e.currentTarget.style.color = '#ef4444'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}>
                                                 <Trash2 size={18} />
                                             </button>
@@ -200,8 +237,8 @@ export default function AdsManagement() {
             {showModal && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', padding: '2rem' }}>
                     <div style={{ ...cardStyle, width: '100%', maxWidth: '600px', padding: '3rem', position: 'relative' }}>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '2.5rem' }}>Configurar Nueva Campaña</h2>
-                        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '2.5rem' }}>{editingId ? 'Editar Campaña' : 'Configurar Nueva Campaña'}</h2>
+                        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Nombre Público</label>
@@ -241,8 +278,10 @@ export default function AdsManagement() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.5rem' }}>
-                                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: 'none', fontWeight: 900, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
-                                <button type="submit" style={{ flex: 2, padding: '1.25rem', borderRadius: '1.25rem', fontSize: '1rem', fontWeight: 900, cursor: 'pointer', border: 'none', color: '#fff', background: 'linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%)' }}>GUARDAR Y ACTIVAR</button>
+                                <button type="button" onClick={() => { setShowModal(false); resetForm(); }} style={{ flex: 1, padding: '1.25rem', borderRadius: '1.25rem', border: '1px solid #e6e9ed', background: 'none', fontWeight: 900, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
+                                <button type="submit" style={{ flex: 2, padding: '1.25rem', borderRadius: '1.25rem', fontSize: '1rem', fontWeight: 900, cursor: 'pointer', border: 'none', color: '#fff', background: 'linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%)' }}>
+                                    {editingId ? 'GUARDAR CAMBIOS' : 'GUARDAR Y ACTIVAR'}
+                                </button>
                             </div>
                         </form>
                     </div>
