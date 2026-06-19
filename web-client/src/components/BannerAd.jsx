@@ -35,28 +35,29 @@ export default function BannerAd({ adData, onClose, onComplete }) {
 
     const handleComplete = async () => {
         setStatus('processing');
+        setError('');
         try {
-            if (!currentUser) throw new Error("No autenticado");
+            if (!currentUser) throw new Error("Debes estar logueado para recibir recompensas.");
 
             const userRef = doc(db, 'users', currentUser.uid);
-            const reward = adData?.reward || 0.005;
+            const reward = parseFloat(adData?.reward || 0.005);
 
-            // Update user balances
+            // Update user balances in Firestore
+            console.log("Intentando acreditar recompensa:", reward);
+
             await updateDoc(userRef, {
                 balance: increment(reward),
                 totalEarnings: increment(reward),
                 adsWatched: increment(1)
             });
 
-            // Update ad click counter (if it's a real ad from Firestore)
-            if (adData?.id) {
+            // Update ad click counter
+            if (adData?.id && adData.id !== 'demo') {
                 const adRef = doc(db, 'ads', adData.id);
-                await updateDoc(adRef, {
-                    clicks: increment(1)
-                });
+                updateDoc(adRef, { clicks: increment(1) }).catch(e => console.warn("Error tracking click", e));
             }
 
-            // Register transaction in activity feed
+            // Register transaction
             await addDoc(collection(db, 'transactions'), {
                 userId: currentUser.uid,
                 adId: adData?.id || 'demo',
@@ -71,12 +72,17 @@ export default function BannerAd({ adData, onClose, onComplete }) {
             setTimeout(() => {
                 if (onClose) onClose();
                 if (onComplete) onComplete();
-            }, 3000); // Close automatically after 3 seconds of success
+            }, 3000);
 
         } catch (err) {
-            console.error(err);
-            setError("Error acreditando. Intenta de nuevo.");
+            console.error("Error en acreditación:", err);
+            let userMsg = "Error en el servidor. Intenta de nuevo.";
+            if (err.code === 'permission-denied') userMsg = "Permiso denegado por Firebase. Revisa las reglas.";
+            if (err.message.includes("logueado")) userMsg = err.message;
+
+            setError(userMsg);
             setStatus('waiting');
+            alert(userMsg); // Force notice if it hangs
         }
     };
 
@@ -129,6 +135,7 @@ export default function BannerAd({ adData, onClose, onComplete }) {
                                 <span>¡Pago acreditado con éxito!</span>
                             </>
                         )}
+                        {error && <span style={{ color: '#fee2e2', fontSize: '0.8rem' }}>⚠️ {error}</span>}
                     </div>
 
                     <button
