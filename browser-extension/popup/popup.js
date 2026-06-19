@@ -13,18 +13,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const avatarEl = document.getElementById('user-avatar');
 
     // Load state from extension storage
-    chrome.storage.local.get(['balance', 'todayEarned', 'adsViewed', 'enabled', 'displayName', 'photoURL'], (data) => {
-        balanceEl.textContent = `${(data.balance || 0).toFixed(4)} USD`;
-        todayEarnedEl.textContent = `${(data.todayEarned || 0).toFixed(4)} USD`;
-        teasersViewedEl.textContent = data.adsViewed || 0;
-        popupsViewedEl.textContent = data.popupsViewed || 0;
+    function updateUI(data) {
+        if (balanceEl) balanceEl.textContent = `${(data.balance || 0).toFixed(4)} USD`;
+        if (teasersViewedEl) teasersViewedEl.textContent = data.adsViewed || 0;
+        if (popupsViewedEl) popupsViewedEl.textContent = data.popupsViewed || 0;
+        if (data.displayName && nameEl) nameEl.textContent = data.displayName;
+        if (data.photoURL && avatarEl) avatarEl.src = data.photoURL;
+    }
 
-        if (data.displayName) nameEl.textContent = data.displayName;
-        if (data.photoURL) avatarEl.src = data.photoURL;
-
+    chrome.storage.local.get(['balance', 'adsViewed', 'enabled', 'displayName', 'photoURL', 'popupsViewed'], (data) => {
+        updateUI(data);
         const isEnabled = data.enabled !== false;
         adToggle.checked = isEnabled;
         updateToggleText(isEnabled);
+    });
+
+    // Listen for updates from background
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'UPDATE_UI') {
+            updateUI(message.data);
+        }
     });
 
     // Toggle ad display
