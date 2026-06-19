@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2 } from 'lucide-react';
-import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const cardStyle = {
@@ -23,27 +23,70 @@ const tableHeadCell = {
 export default function UserManager() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isResetting, setIsResetting] = useState(false);
+    const [bonusAmount, setBonusAmount] = useState(5.00); // Default bonus
+    const [bonusEnabled, setBonusEnabled] = useState(true);
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const querySnapshot = await getDocs(collection(db, 'users'));
+            const usersList = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                joined: doc.data().createdAt ? new Date(doc.data().createdAt.toMillis()).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'
+            }));
+            setUsers(usersList);
+        } catch (error) {
+            console.error("Error fetching users: ", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const querySnapshot = await getDocs(collection(db, 'users'));
-                const usersList = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    joined: doc.data().createdAt ? new Date(doc.data().createdAt.toMillis()).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'
-                }));
-                // Filter out admins from this list if you want to, or keep them
-                setUsers(usersList);
-            } catch (error) {
-                console.error("Error fetching users: ", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUsers();
     }, []);
+
+    const resetAllUsers = async () => {
+        if (!confirm("¿ESTÁS SEGURO? Esto pondrá el balance y las visitas de TODOS los usuarios a 0. Esta acción es irreversible.")) return;
+        setIsResetting(true);
+        try {
+            const promises = users.map(user =>
+                updateDoc(doc(db, 'users', user.id), {
+                    balance: 0,
+                    totalEarnings: 0,
+                    adsWatched: 0
+                })
+            );
+            await Promise.all(promises);
+            alert("Sistema reiniciado con éxito.");
+            fetchUsers();
+        } catch (error) {
+            console.error("Error resetting system:", error);
+            alert("Fallo al reiniciar. Revisa la consola.");
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
+    const addBonus = async (userId) => {
+        if (!bonusEnabled) {
+            alert("La opción de bonificación está desactivada.");
+            return;
+        }
+        try {
+            const amount = parseFloat(bonusAmount);
+            await updateDoc(doc(db, 'users', userId), {
+                balance: increment(amount),
+                totalEarnings: increment(amount)
+            });
+            alert(`Bonificación de $${amount} aplicada.`);
+            fetchUsers();
+        } catch (error) {
+            console.error("Error adding bonus:", error);
+        }
+    };
 
     const toggleStatus = async (userId, currentStatus) => {
         const newStatus = currentStatus === 'Banned' ? 'Active' : 'Banned';
@@ -66,6 +109,34 @@ export default function UserManager() {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem 1.5rem', borderRadius: '1rem', background: bonusEnabled ? '#f0fdf4' : '#f8f9fa', border: `1px solid ${bonusEnabled ? '#bbf7d0' : '#e6e9ed'}` }}>
+                        <DollarSign size={16} color={bonusEnabled ? '#16a34a' : '#7f8c8d'} />
+                        <input
+                            type="number"
+                            step="0.1"
+                            value={bonusAmount}
+                            onChange={(e) => setBonusAmount(e.target.value)}
+                            style={{ width: '60px', background: 'transparent', border: 'none', fontWeight: 900, outline: 'none', fontSize: '12px' }}
+                        />
+                        <button
+                            onClick={() => setBonusEnabled(!bonusEnabled)}
+                            style={{
+                                padding: '4px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 900, cursor: 'pointer',
+                                background: bonusEnabled ? '#16a34a' : '#7f8c8d', color: '#fff', border: 'none'
+                            }}
+                        >
+                            {bonusEnabled ? 'BONO ACTIVADO' : 'BONO DESACTIVADO'}
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={resetAllUsers}
+                        disabled={isResetting}
+                        style={{ padding: '0 1.5rem', borderRadius: '1rem', background: '#fee2e2', border: '1px solid #fecaca', color: '#ef4444', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', cursor: 'pointer' }}
+                    >
+                        {isResetting ? 'RESETEANDO...' : 'RESETEAR TODO'}
+                    </button>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.5rem', borderRadius: '1rem', background: '#f8f9fa', border: '1px solid #e6e9ed', color: 'var(--text-dim)' }}>
                         <Users size={18} />
                         <span style={{ fontSize: '11px', fontWeight: 900 }}>{loading ? '...' : users.length} TOTALES</span>
@@ -80,6 +151,7 @@ export default function UserManager() {
                         <Search size={18} color="var(--text-dim)" />
                         <input type="text" placeholder="Buscar por nombre, email o ID de usuario..." style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '0.875rem', width: '100%', fontWeight: 600 }} />
                     </div>
+                    <button onClick={fetchUsers} style={{ padding: '0 2rem', borderRadius: '1rem', background: '#fff', border: '1px solid #e6e9ed', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-dim)', cursor: 'pointer' }}>Actualizar Lista</button>
                     <button style={{ padding: '0 2rem', borderRadius: '1rem', background: '#fff', border: '1px solid #e6e9ed', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-dim)', cursor: 'pointer' }}>Exportar CSV</button>
                 </div>
 
@@ -141,6 +213,15 @@ export default function UserManager() {
                                     </td>
                                     <td style={{ padding: '1.5rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                            {bonusEnabled && (
+                                                <button
+                                                    onClick={() => addBonus(user.id)}
+                                                    style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #bbf7d0', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: '#16a34a' }}
+                                                    title={`Regalar $${bonusAmount}`}
+                                                >
+                                                    <DollarSign size={18} />
+                                                </button>
+                                            )}
                                             <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} title="Historial">
                                                 <History size={18} />
                                             </button>
