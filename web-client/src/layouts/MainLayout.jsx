@@ -94,15 +94,28 @@ export default function MainLayout({ children }) {
     const [brand, setBrand] = useState({ name: 'FASTADS', logo: logoImg });
     const navigate = useNavigate();
 
-    // Sync branding with Firestore
+    // Sync branding + SEO with Firestore (real-time)
     useEffect(() => {
         const unsub = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
+                // Update branding
                 setBrand({
                     name: data.brandName || 'FASTADS',
                     logo: data.brandLogo || logoImg
                 });
+                // Update SEO title
+                if (data.seoTitle) document.title = data.seoTitle;
+                // Update SEO meta description
+                if (data.seoDescription) {
+                    let metaDesc = document.querySelector('meta[name="description"]');
+                    if (!metaDesc) {
+                        metaDesc = document.createElement('meta');
+                        metaDesc.name = 'description';
+                        document.head.appendChild(metaDesc);
+                    }
+                    metaDesc.content = data.seoDescription;
+                }
             }
         });
         return () => unsub();
