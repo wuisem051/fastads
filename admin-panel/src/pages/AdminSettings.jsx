@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Settings, Shield, Globe, Bell, Zap, Database, Lock, UserPlus, Image, Type, Save, CheckCircle, Percent } from 'lucide-react';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -182,7 +182,7 @@ export default function AdminSettings() {
                             </div>
                         </div>
                         <button
-                            onClick={handleSaveBrand}
+                            onClick={handleSaveGlobal}
                             style={{ padding: '1rem 2rem', borderRadius: '1rem', background: saved ? '#4cd137' : 'var(--accent-secondary)', border: 'none', color: '#fff', fontWeight: 900, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem', alignSelf: 'flex-start', transition: 'all 0.3s', boxShadow: saved ? '0 4px 15px rgba(76,209,55,0.3)' : '0 4px 15px rgba(0,160,233,0.2)' }}
                         >
                             {saved ? <><CheckCircle size={18} /> ¡Guardado!</> : <><Save size={18} /> Guardar Identidad</>}
