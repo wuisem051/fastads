@@ -59,7 +59,7 @@ export default function BannerAd({ adData, onClose, onComplete }) {
 
             // Handle Referral commission
             try {
-                const userSnap = await getDoc(userDocRef);
+                const userSnap = await getDoc(userRef);
                 const sponsorId = userSnap.data()?.referredBy;
                 if (sponsorId) {
                     const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
@@ -161,13 +161,15 @@ export default function BannerAd({ adData, onClose, onComplete }) {
                         {error && <span style={{ color: '#fee2e2', fontSize: '0.8rem' }}>⚠️ {error}</span>}
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '0.1rem', display: 'flex' }}
-                        title="Cerrar (Cancelará la recompensa si no ha terminado)"
-                    >
-                        <X size={18} />
-                    </button>
+                    {status === 'success' && (
+                        <button
+                            onClick={onClose}
+                            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '0.1rem', display: 'flex' }}
+                            title="Cerrar"
+                        >
+                            <X size={18} />
+                        </button>
+                    )}
                 </div>
 
                 {/* Content Body */}

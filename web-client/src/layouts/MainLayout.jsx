@@ -90,8 +90,10 @@ export default function MainLayout({ children }) {
     const { currentUser, userProfile, logout } = useAuth();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [notifsRead, setNotifsRead] = useState(() => localStorage.getItem('notifs_read') === 'true');
     const [showAdConfirmation, setShowAdConfirmation] = useState(null);
     const [brand, setBrand] = useState({ name: 'FASTADS', logo: logoImg });
+    const [extensionUrl, setExtensionUrl] = useState('');
     const navigate = useNavigate();
 
     // Sync branding + SEO with Firestore (real-time)
@@ -104,6 +106,7 @@ export default function MainLayout({ children }) {
                     name: data.brandName || 'FASTADS',
                     logo: data.brandLogo || logoImg
                 });
+                setExtensionUrl(data.extensionUrl || '');
                 // Update SEO title
                 if (data.seoTitle) document.title = data.seoTitle;
                 // Update SEO meta description
@@ -346,13 +349,15 @@ export default function MainLayout({ children }) {
                                 onMouseLeave={e => !isNotifOpen && (e.currentTarget.style.background = 'transparent')}
                             >
                                 <Bell size={18} />
-                                <div style={{
-                                    position: 'absolute', top: '-4px', right: '-4px',
-                                    width: '14px', height: '14px', background: '#ef4444',
-                                    borderRadius: '50%', border: '2px solid #fff',
-                                    fontSize: '8px', color: '#fff', display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center', fontWeight: 900
-                                }}>1</div>
+                                {!notifsRead && (
+                                    <div style={{
+                                        position: 'absolute', top: '-4px', right: '-4px',
+                                        width: '14px', height: '14px', background: '#ef4444',
+                                        borderRadius: '50%', border: '2px solid #fff',
+                                        fontSize: '8px', color: '#fff', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center', fontWeight: 900
+                                    }}>1</div>
+                                )}
                             </div>
 
                             {isNotifOpen && (
@@ -366,17 +371,33 @@ export default function MainLayout({ children }) {
                                     }}>
                                         <div style={{ padding: '1.25rem', borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <h4 style={{ fontSize: '0.9rem', fontWeight: 900 }}>Notificaciones</h4>
-                                            <span style={{ fontSize: '10px', color: 'var(--accent-secondary)', fontWeight: 700, cursor: 'pointer' }}>Marcar como leídas</span>
+                                            <span
+                                                onClick={() => {
+                                                    setNotifsRead(true);
+                                                    localStorage.setItem('notifs_read', 'true');
+                                                }}
+                                                style={{ fontSize: '10px', color: notifsRead ? '#9ca3af' : 'var(--accent-secondary)', fontWeight: 700, cursor: notifsRead ? 'default' : 'pointer' }}
+                                            >
+                                                {notifsRead ? '✓ Leídas' : 'Marcar como leídas'}
+                                            </span>
                                         </div>
                                         <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                            <div style={{ padding: '1rem', borderBottom: '1px solid #f9fafb', background: 'rgba(0,160,233,0.02)', cursor: 'pointer' }}>
-                                                <p style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>¡Bienvenido a FastAds!</p>
-                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.4 }}>Empieza a ver anuncios y ganar recompensas hoy mismo.</p>
-                                                <p style={{ fontSize: '9px', color: 'var(--accent-secondary)', fontWeight: 700, marginTop: '8px' }}>Hace 5 minutos</p>
-                                            </div>
-                                            <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-dim)' }}>
-                                                <p style={{ fontSize: '0.8rem' }}>No tienes más notificaciones</p>
-                                            </div>
+                                            {notifsRead ? (
+                                                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-dim)' }}>
+                                                    <p style={{ fontSize: '0.8rem' }}>No tienes notificaciones pendientes</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div style={{ padding: '1rem', borderBottom: '1px solid #f9fafb', background: 'rgba(0,160,233,0.02)', cursor: 'pointer' }}>
+                                                        <p style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>¡Bienvenido a FastAds!</p>
+                                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.4 }}>Empieza a ver anuncios y ganar recompensas hoy mismo.</p>
+                                                        <p style={{ fontSize: '9px', color: 'var(--accent-secondary)', fontWeight: 700, marginTop: '8px' }}>Hace 5 minutos</p>
+                                                    </div>
+                                                    <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-dim)' }}>
+                                                        <p style={{ fontSize: '0.8rem' }}>No tienes más notificaciones</p>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </>
@@ -484,7 +505,11 @@ export default function MainLayout({ children }) {
                 {/* Page content */}
                 <section style={{ paddingTop: 'calc(70px + 3rem)', paddingLeft: '3rem', paddingRight: '3rem', paddingBottom: '3rem' }}>
                     <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
-                        {children}
+                        {React.Children.map(children, child =>
+                            React.isValidElement(child)
+                                ? React.cloneElement(child, { extensionUrl })
+                                : child
+                        )}
                     </div>
                 </section>
 

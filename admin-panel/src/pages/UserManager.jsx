@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2 } from 'lucide-react';
+import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2, Globe } from 'lucide-react';
 import { collection, getDocs, updateDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -160,6 +160,7 @@ export default function UserManager() {
                         <thead>
                             <tr>
                                 <th style={tableHeadCell}>Usuario / Email</th>
+                                <th style={tableHeadCell}>País</th>
                                 <th style={tableHeadCell}>Balance & Actividad</th>
                                 <th style={tableHeadCell}>Fecha Registro</th>
                                 <th style={tableHeadCell}>Estado</th>
@@ -168,9 +169,9 @@ export default function UserManager() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>Cargando usuarios reales...</td></tr>
+                                <tr><td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>Cargando usuarios reales...</td></tr>
                             ) : users.length === 0 ? (
-                                <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>No hay usuarios en la base de datos yet</td></tr>
+                                <tr><td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>No hay usuarios en la base de datos yet</td></tr>
                             ) : users.map((user, i) => (
                                 <tr key={user.id} style={{ borderBottom: i === users.length - 1 ? 'none' : '1px solid #f9fafb' }}>
                                     <td style={{ padding: '1.5rem' }}>
@@ -188,6 +189,15 @@ export default function UserManager() {
                                                 {user.referredBy && <p style={{ fontSize: '9px', color: '#16a34a', fontWeight: 900 }}>SPONSOR: {user.referredBy.substring(0, 8)}...</p>}
                                             </div>
                                         </div>
+                                    </td>
+                                    <td style={{ padding: '1.5rem' }}>
+                                        {user.country ? (
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', background: '#f8f9fa', border: '1px solid #e6e9ed', borderRadius: '8px', padding: '4px 10px' }}>
+                                                <Globe size={11} /> {user.country}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: '11px', color: 'rgba(0,0,0,0.25)', fontStyle: 'italic' }}>N/A</span>
+                                        )}
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
                                         <p style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', marginBottom: '4px' }}>

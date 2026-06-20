@@ -12,10 +12,11 @@ import {
     Bell
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, orderBy, limit, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import BannerAd from '../components/BannerAd';
+import EmbedBannerAd from '../components/EmbedBannerAd';
 
 const StatCard = ({ title, value, icon, subtitle }) => (
     <div style={{
@@ -55,7 +56,7 @@ const StatCard = ({ title, value, icon, subtitle }) => (
     </div>
 );
 
-export default function Dashboard() {
+export default function Dashboard({ extensionUrl }) {
     const { currentUser, userProfile } = useAuth();
     const [activity, setActivity] = useState([]);
     const [loadingActivity, setLoadingActivity] = useState(true);
@@ -65,23 +66,35 @@ export default function Dashboard() {
     const [showAd, setShowAd] = useState(null);
     const [showInvitation, setShowInvitation] = useState(null);
 
+    // Banner ad states
+    const [availableBannerAds, setAvailableBannerAds] = useState([]);
+    const [showBannerAd, setShowBannerAd] = useState(null);
+
+    // Extension URL from settings (fallback if not passed as prop)
+    const [localExtUrl, setLocalExtUrl] = useState('');
+
     useEffect(() => {
         if (!currentUser) return;
 
         const fetchAdsData = async () => {
             try {
-                // 1. Fetch active ads (fetching all for robustness, then filtering in JS)
+                // 1. Fetch active URL ads
                 const adsSnap = await getDocs(collection(db, 'ads'));
                 const allAds = adsSnap.docs
                     .map(d => ({ id: d.id, ...d.data() }))
                     .filter(ad => ad.status === 'Active' || ad.status === 'active');
 
-                // 2. Fetch user's recent ad history
-                // Simplify query to avoid composite index requirements
+                // 2. Fetch active banner ads
+                const bannerSnap = await getDocs(collection(db, 'banner_ads'));
+                const allBannerAds = bannerSnap.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .filter(ad => ad.status === 'Active' || ad.status === 'active');
+
+                // 3. Fetch user's recent ad history
                 const transSnap = await getDocs(query(
                     collection(db, 'transactions'),
                     where('userId', '==', currentUser.uid),
-                    where('type', '==', 'ad_view')
+                    where('type', 'in', ['ad_view', 'banner_view'])
                 ));
 
                 const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
@@ -89,25 +102,34 @@ export default function Dashboard() {
                     .map(d => d.data())
                     .filter(h => h.createdAt?.toMillis() > twoDaysAgo);
 
-                // 3. Filter ads
-                const filtered = allAds.filter(ad => {
-                    // Check total limit
+                // 4. Filter URL ads
+                const filteredAds = allAds.filter(ad => {
                     if (ad.maxViews && (ad.clicks || 0) >= ad.maxViews) return false;
-
-                    // Check user cooldown
                     const lastView = userHistory
                         .filter(h => h.adId === ad.id)
                         .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))[0];
-
                     if (lastView && lastView.createdAt) {
                         const hoursSince = (Date.now() - lastView.createdAt.toMillis()) / (1000 * 60 * 60);
                         if (hoursSince < (ad.cooldown || 24)) return false;
                     }
-
                     return true;
                 });
 
-                setAvailableAds(filtered);
+                // 5. Filter banner ads
+                const filteredBannerAds = allBannerAds.filter(ad => {
+                    if (ad.maxViews && (ad.clicks || 0) >= ad.maxViews) return false;
+                    const lastView = userHistory
+                        .filter(h => h.adId === ad.id)
+                        .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))[0];
+                    if (lastView && lastView.createdAt) {
+                        const hoursSince = (Date.now() - lastView.createdAt.toMillis()) / (1000 * 60 * 60);
+                        if (hoursSince < (ad.cooldown || 24)) return false;
+                    }
+                    return true;
+                });
+
+                setAvailableAds(filteredAds);
+                setAvailableBannerAds(filteredBannerAds);
             } catch (error) {
                 console.error("Error loading ads:", error);
             } finally {
@@ -118,11 +140,25 @@ export default function Dashboard() {
         fetchAdsData();
     }, [currentUser]);
 
-    // Logic for random invitation
+    // Fetch extension URL from settings as fallback
     useEffect(() => {
-        if (availableAds.length === 0 || showInvitation || showAd) return;
+        const fetchExtUrl = async () => {
+            try {
+                const snap = await getDoc(doc(db, 'settings', 'general'));
+                if (snap.exists()) {
+                    setLocalExtUrl(snap.data().extensionUrl || '');
+                }
+            } catch (e) { console.error(e); }
+        };
+        if (!extensionUrl) fetchExtUrl();
+    }, [extensionUrl]);
 
-        // Set a random timer between 15 and 60 seconds
+    const effectiveExtUrl = extensionUrl || localExtUrl;
+
+    // Logic for random URL popup invitation
+    useEffect(() => {
+        if (availableAds.length === 0 || showInvitation || showAd || showBannerAd) return;
+
         const randomTime = Math.floor(Math.random() * (60000 - 15000 + 1)) + 15000;
 
         const timer = setTimeout(() => {
@@ -130,7 +166,21 @@ export default function Dashboard() {
         }, randomTime);
 
         return () => clearTimeout(timer);
-    }, [availableAds, showInvitation, showAd]);
+    }, [availableAds, showInvitation, showAd, showBannerAd]);
+
+    // Logic for random banner ad popup (separate timer, separate from URL ads)
+    useEffect(() => {
+        if (availableBannerAds.length === 0 || showBannerAd || showAd || showInvitation) return;
+
+        // Banner ads appear between 30-90 seconds (different interval from URL ads)
+        const randomTime = Math.floor(Math.random() * (90000 - 30000 + 1)) + 30000;
+
+        const timer = setTimeout(() => {
+            setShowBannerAd(availableBannerAds[0]);
+        }, randomTime);
+
+        return () => clearTimeout(timer);
+    }, [availableBannerAds, showBannerAd, showAd, showInvitation]);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -156,7 +206,6 @@ export default function Dashboard() {
     const displayName = userProfile?.displayName || currentUser?.displayName || 'Usuario';
     const balance = userProfile?.balance ?? 0;
     const adsWatched = userProfile?.adsWatched ?? 0;
-    // Fallback for older accounts that might not have totalEarnings field yet
     const totalEarnings = Math.max(userProfile?.totalEarnings || 0, userProfile?.balance || 0);
     const referrals = userProfile?.referrals ?? 0;
 
@@ -170,6 +219,8 @@ export default function Dashboard() {
         if (secs < 3600) return `Hace ${Math.floor(secs / 60)}min`;
         return `Hace ${Math.floor(secs / 3600)}h`;
     };
+
+    const totalAvailable = availableAds.length + availableBannerAds.length;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
@@ -186,7 +237,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ background: '#fff', padding: '0.75rem 1.5rem', borderRadius: '1rem', border: '1px solid #e6e9ed', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 12px #22c55e' }}></div>
-                        <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)' }}>{loadingAds ? '...' : availableAds.length} ANUNCIOS DISPONIBLES</span>
+                        <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)' }}>{loadingAds ? '...' : totalAvailable} ANUNCIOS DISPONIBLES</span>
                     </div>
                 </div>
             </div>
@@ -224,9 +275,9 @@ export default function Dashboard() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                         <div style={{
                                             width: '2.75rem', height: '2.75rem', borderRadius: '50%',
-                                            background: 'rgba(76,209,55,0.08)',
+                                            background: item.type === 'banner_view' ? 'rgba(99,102,241,0.08)' : 'rgba(76,209,55,0.08)',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            color: 'var(--accent-primary)', flexShrink: 0
+                                            color: item.type === 'banner_view' ? '#6366f1' : 'var(--accent-primary)', flexShrink: 0
                                         }}>
                                             <Eye size={18} />
                                         </div>
@@ -237,7 +288,7 @@ export default function Dashboard() {
                                             </p>
                                         </div>
                                     </div>
-                                    <span style={{ color: 'var(--accent-primary)', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '1px' }}>
+                                    <span style={{ color: item.type === 'banner_view' ? '#6366f1' : 'var(--accent-primary)', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '1px' }}>
                                         +{formatCurrency(item.amount || 0)}
                                     </span>
                                 </div>
@@ -246,25 +297,40 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Extension Promo Banner Removed/Moved and Replaced by Ads Grid if desired, but let's keep UI mostly same */}
+                {/* Right Column: Extension Promo + Ad Status */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                     <div style={{ borderRadius: '2rem', padding: '2.5rem', background: 'linear-gradient(135deg, #00a0e9 0%, #4cd137 100%)', border: '1px solid #e1e4e8', color: '#fff', minHeight: 'auto' }}>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '1rem' }}>Gana más con la Extensión</h3>
                         <p style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '1.5rem' }}>Instala nuestra herramienta oficial para automatizar tus ganancias.</p>
-                        <button style={{ background: '#000', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '1rem', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem' }}>DESCARGAR AHORA</button>
+                        <a
+                            href={effectiveExtUrl || '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                                display: 'inline-block',
+                                background: '#000', color: '#fff', border: 'none',
+                                padding: '0.75rem 1.5rem', borderRadius: '1rem',
+                                fontWeight: 900, cursor: effectiveExtUrl ? 'pointer' : 'not-allowed',
+                                fontSize: '0.8rem', textDecoration: 'none',
+                                opacity: effectiveExtUrl ? 1 : 0.6,
+                                pointerEvents: effectiveExtUrl ? 'auto' : 'none'
+                            }}
+                        >
+                            DESCARGAR AHORA
+                        </a>
                     </div>
 
                     <div style={{ background: '#fff', borderRadius: '2rem', padding: '2rem', border: '1px solid #e6e9ed', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '150px', textAlign: 'center' }}>
                         <div>
                             <TrendingUp size={40} color="var(--accent-secondary)" style={{ marginBottom: '1rem', opacity: 0.2 }} />
                             <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-dim)' }}>
-                                {loadingAds ? 'Buscando tareas...' : availableAds.length > 0 ? '¡Un anuncio está activo!' : 'No hay tareas disponibles por ahora.'}
+                                {loadingAds ? 'Buscando tareas...' : totalAvailable > 0 ? `¡${totalAvailable} anuncio(s) activo(s)!` : 'No hay tareas disponibles por ahora.'}
                             </p>
                             {availableAds.length > 0 && !showAd && !showInvitation && (
                                 <button
                                     onClick={() => setShowInvitation(availableAds[0])}
                                     style={{
-                                        marginTop: '1rem',
+                                        marginTop: '0.75rem',
                                         padding: '0.75rem 1.5rem',
                                         borderRadius: '1rem',
                                         background: 'linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%)',
@@ -277,6 +343,27 @@ export default function Dashboard() {
                                     }}
                                 >
                                     VER ANUNCIO
+                                </button>
+                            )}
+                            {availableBannerAds.length > 0 && !showBannerAd && !showAd && (
+                                <button
+                                    onClick={() => setShowBannerAd(availableBannerAds[0])}
+                                    style={{
+                                        marginTop: '0.5rem',
+                                        padding: '0.65rem 1.25rem',
+                                        borderRadius: '1rem',
+                                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        fontWeight: 900,
+                                        fontSize: '0.7rem',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
+                                        display: 'block',
+                                        width: '100%'
+                                    }}
+                                >
+                                    VER BANNER
                                 </button>
                             )}
                         </div>
@@ -338,14 +425,26 @@ export default function Dashboard() {
                 )}
             </AnimatePresence>
 
-            {/* BannerAd modal */}
+            {/* BannerAd modal (URL popup type) */}
             {showAd && (
                 <BannerAd
                     adData={showAd}
                     onClose={() => setShowAd(null)}
                     onComplete={() => {
                         setShowAd(null);
-                        // Optional: refresh data or show success
+                    }}
+                />
+            )}
+
+            {/* EmbedBannerAd modal (300x250 banner type) */}
+            {showBannerAd && (
+                <EmbedBannerAd
+                    adData={showBannerAd}
+                    onClose={() => setShowBannerAd(null)}
+                    onComplete={() => {
+                        setShowBannerAd(null);
+                        // Remove from available list
+                        setAvailableBannerAds(prev => prev.filter(a => a.id !== showBannerAd.id));
                     }}
                 />
             )}

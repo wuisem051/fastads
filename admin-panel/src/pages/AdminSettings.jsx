@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Shield, Globe, Bell, Zap, Database, Lock, UserPlus, Image, Type, Save, CheckCircle, Percent } from 'lucide-react';
+import { Settings, Shield, Globe, Bell, Zap, Database, Lock, UserPlus, Image, Type, Save, CheckCircle, Percent, Download } from 'lucide-react';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import logoImg from '../assets/logo.png';
@@ -80,6 +80,7 @@ export default function AdminSettings() {
     const [referralPercent, setReferralPercent] = useState(10);
     const [seoTitle, setSeoTitle] = useState('');
     const [seoDescription, setSeoDescription] = useState('');
+    const [extensionUrl, setExtensionUrl] = useState('');
     const [saved, setSaved] = useState(false);
     const [loading, setLoading] = useState(true);
     const fileRef = useRef();
@@ -97,6 +98,7 @@ export default function AdminSettings() {
                     setSeoDescription(data.seoDescription || 'La plataforma líder para ganar criptomonedas de forma automatizada.');
                     localStorage.setItem('brand_name', data.brandName || 'FASTADS');
                     localStorage.setItem('brand_logo', data.brandLogo || logoImg);
+                    setExtensionUrl(data.extensionUrl || '');
                 }
             } catch (e) { console.error(e); }
             finally { setLoading(false); }
@@ -122,6 +124,7 @@ export default function AdminSettings() {
                 referralPercent: parseFloat(referralPercent),
                 seoTitle,
                 seoDescription,
+                extensionUrl,
                 updatedAt: serverTimestamp()
             });
             localStorage.setItem('brand_name', brandName);
@@ -257,6 +260,25 @@ export default function AdminSettings() {
                                     onChange={(e) => setSeoDescription(e.target.value)}
                                     placeholder="Describe brevemente tu plataforma para Google..."
                                 />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* EXTENSION DOWNLOAD URL */}
+                    <div style={cardStyle}>
+                        <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Download size={22} color="#10b981" /> Extensión del Navegador
+                        </h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>URL de Descarga de la Extensión</label>
+                                <input
+                                    style={inputStyle}
+                                    value={extensionUrl}
+                                    onChange={(e) => setExtensionUrl(e.target.value)}
+                                    placeholder="https://chrome.google.com/webstore/..."
+                                />
+                                <p style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 600 }}>Este enlace se usará en el botón "DESCARGAR AHORA" del dashboard del usuario.</p>
                             </div>
                         </div>
                     </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Zap, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Zap, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, Globe, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Register() {
@@ -10,7 +10,7 @@ export default function Register() {
     const [searchParams] = useSearchParams();
     const referralCode = searchParams.get('ref');
 
-    const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+    const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', country: '', referralInput: referralCode || '' });
     const [showPass, setShowPass] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -51,7 +51,8 @@ export default function Register() {
         }
         setLoading(true);
         try {
-            await register(form.email, form.password, form.name, referralCode);
+            const effectiveReferral = form.referralInput.trim() || referralCode;
+            await register(form.email, form.password, form.name, effectiveReferral, form.country);
             navigate('/dashboard');
         } catch (err) {
             setError(errorMessages[err.code] || 'Error al registrarse. Intenta de nuevo.');
@@ -131,6 +132,37 @@ export default function Register() {
                             </div>
                         </div>
 
+                        {/* Country */}
+                        <div>
+                            <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>País</label>
+                            <div style={{ position: 'relative' }}>
+                                <Globe size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
+                                <select id="reg-country" name="country" required value={form.country} onChange={handleChange}
+                                    style={{ ...inputStyle, paddingLeft: '2.8rem', appearance: 'none', cursor: 'pointer' }}
+                                    onFocus={e => e.target.style.borderColor = '#4cd137'}
+                                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                                >
+                                    <option value="" disabled style={{ background: '#1a1a2e', color: 'rgba(255,255,255,0.4)' }}>Selecciona tu país</option>
+                                    {[
+                                        'Afghanistan', 'Albania', 'Algeria', 'Angola', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
+                                        'Bahrain', 'Bangladesh', 'Belarus', 'Belgium', 'Bolivia', 'Bosnia and Herzegovina', 'Brazil', 'Bulgaria',
+                                        'Cambodia', 'Cameroon', 'Canada', 'Chile', 'China', 'Colombia', 'Congo', 'Costa Rica', 'Croatia', 'Cuba', 'Czech Republic',
+                                        'Denmark', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Estonia', 'Ethiopia',
+                                        'Finland', 'France', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Guatemala', 'Honduras', 'Hungary',
+                                        'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan',
+                                        'Kazakhstan', 'Kenya', 'Kuwait', 'Latvia', 'Lebanon', 'Libya', 'Lithuania', 'Luxembourg',
+                                        'Malaysia', 'Mexico', 'Moldova', 'Morocco', 'Mozambique', 'Myanmar', 'Nepal', 'Netherlands',
+                                        'New Zealand', 'Nicaragua', 'Nigeria', 'North Korea', 'Norway', 'Oman', 'Pakistan', 'Panama',
+                                        'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar',
+                                        'Romania', 'Russia', 'Saudi Arabia', 'Senegal', 'Serbia', 'Singapore', 'Slovakia', 'Slovenia',
+                                        'Somalia', 'South Africa', 'South Korea', 'Spain', 'Sri Lanka', 'Sudan', 'Sweden', 'Switzerland', 'Syria',
+                                        'Taiwan', 'Tanzania', 'Thailand', 'Tunisia', 'Turkey', 'Uganda', 'Ukraine', 'United Arab Emirates',
+                                        'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Venezuela', 'Vietnam', 'Yemen', 'Zimbabwe'
+                                    ].map(c => <option key={c} value={c} style={{ background: '#1a1a2e' }}>{c}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
                         {/* Email */}
                         <div>
                             <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Correo electrónico</label>
@@ -182,6 +214,27 @@ export default function Register() {
                                     <CheckCircle2 size={16} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#4cd137' }} />
                                 )}
                             </div>
+                        </div>
+
+                        {/* Referral Code (optional) */}
+                        <div>
+                            <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                Código de referido <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 500, textTransform: 'none' }}>(opcional)</span>
+                            </label>
+                            <div style={{ position: 'relative' }}>
+                                <Gift size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+                                <input id="reg-referral" name="referralInput" type="text" value={form.referralInput} onChange={handleChange}
+                                    placeholder="Ej: ABC123"
+                                    style={{ ...inputStyle, textTransform: 'uppercase' }}
+                                    onFocus={e => e.target.style.borderColor = '#00a0e9'}
+                                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
+                                {form.referralInput && (
+                                    <CheckCircle2 size={16} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#00a0e9' }} />
+                                )}
+                            </div>
+                            {form.referralInput && (
+                                <p style={{ fontSize: '0.72rem', color: '#00a0e9', fontWeight: 600, marginTop: '0.3rem' }}>✓ Código de amigo aplicado</p>
+                            )}
                         </div>
 
                         {/* Bono badge */}

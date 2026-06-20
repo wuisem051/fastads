@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const register = async (email, password, displayName, referralCode = null) => {
+    const register = async (email, password, displayName, referralCode = null, country = '') => {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(cred.user, { displayName });
 
@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
             uid: cred.user.uid,
             displayName,
             email,
+            country: country || '',
             balance: 0,
             totalEarnings: 0,
             adsWatched: 0,
