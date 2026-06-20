@@ -357,7 +357,10 @@ export default function App() {
     const unsub = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        if (data.seoTitle) document.title = data.seoTitle;
+        if (data.seoTitle) {
+          document.title = data.seoTitle;
+          localStorage.setItem('seo_title', data.seoTitle); // cache para próxima carga
+        }
         if (data.seoDescription) {
           let meta = document.querySelector('meta[name="description"]');
           if (!meta) {
