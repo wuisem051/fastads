@@ -192,10 +192,9 @@ export default function Dashboard() {
             </div>
 
             {/* Stat Cards — datos reales de Firestore */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
                 <StatCard title="Balance Total" value={formatCurrency(balance)} icon={<DollarSign size={24} />} />
                 <StatCard title="Anuncios Vistos" value={adsWatched} icon={<Eye size={24} />} />
-                <StatCard title="Total Ganado" value={formatCurrency(totalEarnings)} icon={<TrendingUp size={24} />} />
                 <StatCard title="Red de Referidos" value={referrals} icon={<Users size={24} />} />
             </div>
 

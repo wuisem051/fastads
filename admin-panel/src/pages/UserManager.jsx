@@ -185,6 +185,7 @@ export default function UserManager() {
                                             <div>
                                                 <p style={{ fontWeight: 900, fontSize: '1rem', marginBottom: '4px' }}>{user.name || user.displayName || 'Usuario'}</p>
                                                 <p style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={12} /> {user.email}</p>
+                                                {user.referredBy && <p style={{ fontSize: '9px', color: '#16a34a', fontWeight: 900 }}>SPONSOR: {user.referredBy.substring(0, 8)}...</p>}
                                             </div>
                                         </div>
                                     </td>
@@ -192,9 +193,12 @@ export default function UserManager() {
                                         <p style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', marginBottom: '4px' }}>
                                             <DollarSign size={16} /> {Number(user.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
                                         </p>
-                                        <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.04em' }}>
-                                            {user.referrals || 0} REFERIDOS ACTIVOS
-                                        </p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.04em' }}>
+                                                {users.filter(u => u.referredBy === user.id).length} REFERIDOS
+                                            </p>
+                                            <span style={{ fontSize: '9px', padding: '2px 6px', background: '#fef3c7', color: '#92400e', borderRadius: '4px', fontWeight: 900 }}>CODE: {user.referralCode}</span>
+                                        </div>
                                     </td>
                                     <td style={{ padding: '1.5rem' }}>
                                         <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{user.joined}</p>

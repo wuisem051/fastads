@@ -57,7 +57,33 @@ export default function BannerAd({ adData, onClose, onComplete }) {
                 updateDoc(adRef, { clicks: increment(1) }).catch(e => console.warn("Error tracking click", e));
             }
 
-            // Register transaction
+            // Handle Referral commission
+            try {
+                const userSnap = await getDoc(userDocRef);
+                const sponsorId = userSnap.data()?.referredBy;
+                if (sponsorId) {
+                    const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
+                    const p = settingsSnap.data()?.referralPercent || 10;
+                    const commission = reward * (p / 100);
+                    if (commission > 0) {
+                        await updateDoc(doc(db, 'users', sponsorId), {
+                            balance: increment(commission),
+                            totalEarnings: increment(commission)
+                        });
+                        // Record referral transaction
+                        await addDoc(collection(db, 'transactions'), {
+                            userId: sponsorId,
+                            referredUserId: currentUser.uid,
+                            type: 'referral_comm',
+                            amount: commission,
+                            description: `Comisión por actividad de referido`,
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                }
+            } catch (e) { console.error("Referral Pay Error:", e); }
+
+            // Register original transaction
             await addDoc(collection(db, 'transactions'), {
                 userId: currentUser.uid,
                 adId: adData?.id || 'demo',

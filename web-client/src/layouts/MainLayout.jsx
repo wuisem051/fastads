@@ -247,9 +247,7 @@ export default function MainLayout({ children }) {
     }, [currentUser, userProfile]);
 
     const dropdownItems = [
-        { icon: <PlusCircle size={16} />, label: 'Ordenar publicidad', path: '/ads' },
         { icon: <TrendingUp size={16} />, label: 'Ganancias', path: '/earnings' },
-        { icon: <History size={16} />, label: 'Recarga tu saldo', path: '/withdrawals' },
         { icon: <Wallet size={16} />, label: 'Retirar fondos', path: '/withdrawals' },
         { icon: <SettingsIcon size={16} />, label: 'Ajustes', path: '/settings' },
         { icon: <LogoutIcon size={16} />, label: 'Salida', path: '/', isLogout: true },

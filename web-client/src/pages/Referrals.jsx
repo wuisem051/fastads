@@ -22,18 +22,19 @@ const tableCell = { padding: '1.25rem 2rem' };
 export default function Referrals() {
     const { currentUser, userProfile } = useAuth();
     const [referralList, setReferralList] = useState([]);
+    const [totalReferralProfit, setTotalReferralProfit] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    const referralLink = `${window.location.origin}/register?ref=${currentUser?.uid || ''}`;
+    const referralLink = `${window.location.origin}/register?ref=${userProfile?.referralCode || ''}`;
 
     useEffect(() => {
         if (!currentUser) return;
-        const fetchReferrals = async () => {
+        const fetchData = async () => {
             try {
-                // In a real multi-level system, this query would be more complex
+                // 1. Fetch direct referrals
                 const q = query(
                     collection(db, 'users'),
-                    where('referrerId', '==', currentUser.uid)
+                    where('referredBy', '==', currentUser.uid)
                 );
                 const snap = await getDocs(q);
                 setReferralList(snap.docs.map(doc => ({
@@ -41,13 +42,24 @@ export default function Referrals() {
                     ...doc.data(),
                     joinDate: doc.data().createdAt?.toDate().toLocaleDateString('es-ES') || 'Reciente'
                 })));
+
+                // 2. Fetch total profits from referrals
+                const tq = query(
+                    collection(db, 'transactions'),
+                    where('userId', '==', currentUser.uid),
+                    where('type', '==', 'referral_comm')
+                );
+                const tSnap = await getDocs(tq);
+                const total = tSnap.docs.reduce((acc, doc) => acc + (doc.data().amount || 0), 0);
+                setTotalReferralProfit(total);
+
             } catch (error) {
                 console.error(error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchReferrals();
+        fetchData();
     }, [currentUser]);
 
     const levels = [
@@ -75,11 +87,11 @@ export default function Referrals() {
                 </div>
                 <div style={{ ...card, padding: '1rem 1.5rem', borderRadius: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div>
-                        <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '4px' }}>Total Red</p>
-                        <p className="font-digital" style={{ color: 'var(--accent-secondary)', fontSize: '1.25rem' }}>{referralList.length}</p>
+                        <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '4px' }}>Ganancia Red</p>
+                        <p className="font-digital" style={{ color: 'var(--accent-primary)', fontSize: '1.25rem' }}>${totalReferralProfit.toFixed(4)}</p>
                     </div>
-                    <div style={{ width: '3rem', height: '3rem', borderRadius: '0.875rem', background: 'rgba(0,160,233,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-secondary)' }}>
-                        <Users size={24} />
+                    <div style={{ width: '3rem', height: '3rem', borderRadius: '0.875rem', background: 'rgba(76,209,55,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
+                        <BarChart2 size={24} />
                     </div>
                 </div>
             </div>
@@ -89,10 +101,10 @@ export default function Referrals() {
                 <div style={{ ...card, borderRadius: '2.5rem', padding: '2.5rem', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: '-2rem', right: '-2rem', width: '8rem', height: '8rem', background: 'rgba(0,160,233,0.04)', borderRadius: '50%', filter: 'blur(20px)' }}></div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <Share2 size={22} color="var(--accent-secondary)" /> Enlace de Invitación
+                        <Share2 size={22} color="var(--accent-secondary)" /> Mi Código: <span style={{ color: 'var(--accent-secondary)' }}>{userProfile?.referralCode}</span>
                     </h3>
                     <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                        Comparte este enlace y recibe el 10% de las ganancias de tus invitados de por vida.
+                        Comparte este enlace y recibe comisiones automáticas por la actividad de tu red.
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                         <input readOnly value={referralLink} style={{ flex: 1, background: '#f8f9fa', border: '1px solid #e6e9ed', borderRadius: '1rem', padding: '0.875rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, outline: 'none' }} />

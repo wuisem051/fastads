@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Settings, Shield, Globe, Bell, Zap, Database, Lock, UserPlus, Image, Type, Save, CheckCircle } from 'lucide-react';
+import { Settings, Shield, Globe, Bell, Zap, Database, Lock, UserPlus, Image, Type, Save, CheckCircle, Percent } from 'lucide-react';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 import logoImg from '../assets/logo.png';
 
 const cardStyle = {
@@ -75,8 +77,28 @@ const SettingRow = ({ icon: Icon, title, desc, active }) => (
 export default function AdminSettings() {
     const [brandName, setBrandName] = useState(localStorage.getItem('brand_name') || 'FASTADS');
     const [previewLogo, setPreviewLogo] = useState(localStorage.getItem('brand_logo') || logoImg);
+    const [referralPercent, setReferralPercent] = useState(10);
     const [saved, setSaved] = useState(false);
+    const [loading, setLoading] = useState(true);
     const fileRef = useRef();
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const snap = await getDoc(doc(db, 'settings', 'general'));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    setBrandName(data.brandName || 'FASTADS');
+                    setPreviewLogo(data.brandLogo || logoImg);
+                    setReferralPercent(data.referralPercent || 10);
+                    localStorage.setItem('brand_name', data.brandName || 'FASTADS');
+                    localStorage.setItem('brand_logo', data.brandLogo || logoImg);
+                }
+            } catch (e) { console.error(e); }
+            finally { setLoading(false); }
+        };
+        fetchSettings();
+    }, []);
 
     const handleLogoUpload = (e) => {
         const file = e.target.files[0];
@@ -88,11 +110,21 @@ export default function AdminSettings() {
         reader.readAsDataURL(file);
     };
 
-    const handleSaveBrand = () => {
-        localStorage.setItem('brand_name', brandName);
-        localStorage.setItem('brand_logo', previewLogo);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+    const handleSaveGlobal = async () => {
+        try {
+            await setDoc(doc(db, 'settings', 'general'), {
+                brandName,
+                brandLogo: previewLogo,
+                referralPercent: parseFloat(referralPercent),
+                updatedAt: serverTimestamp()
+            });
+            localStorage.setItem('brand_name', brandName);
+            localStorage.setItem('brand_logo', previewLogo);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (e) {
+            alert("Error guardando ajustes: " + e.message);
+        }
     };
 
     return (
@@ -174,6 +206,31 @@ export default function AdminSettings() {
 
                     <div style={cardStyle}>
                         <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <UserPlus size={22} color="#f1c40f" /> Sistema de Referidos
+                        </h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={settingItemStyle}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                    <div style={{ width: '3rem', height: '3rem', borderRadius: '14px', background: '#fff', border: '1px solid #f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f1c40f' }}>
+                                        <Percent size={20} />
+                                    </div>
+                                    <div>
+                                        <p style={{ fontWeight: 900, fontSize: '0.925rem', marginBottom: '4px' }}>Comisión por Visita</p>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>% que gana el patrocinador</p>
+                                    </div>
+                                </div>
+                                <input
+                                    type="number"
+                                    style={{ ...inputStyle, width: '80px', textAlign: 'center' }}
+                                    value={referralPercent}
+                                    onChange={(e) => setReferralPercent(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={cardStyle}>
+                        <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Globe size={22} color="var(--accent-primary)" /> Configuración de Red
                         </h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -185,28 +242,19 @@ export default function AdminSettings() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                     <div style={{ ...cardStyle, background: 'var(--bg-sidebar)', color: '#fff' }}>
-                        <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '1.5rem' }}>Estado del Servidor</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 900, opacity: 0.6 }}>USO DE CPU</span>
-                                    <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent-primary)' }}>12%</span>
-                                </div>
-                                <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
-                                    <div style={{ width: '12%', height: '100%', background: 'var(--accent-primary)', borderRadius: '3px' }}></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 900, opacity: 0.6 }}>USO DE RAM</span>
-                                    <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--accent-primary)' }}>1.4 GB</span>
-                                </div>
-                                <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
-                                    <div style={{ width: '45%', height: '100%', background: 'var(--accent-primary)', borderRadius: '3px' }}></div>
-                                </div>
-                            </div>
-                        </div>
-                        <button style={{ width: '100%', marginTop: '2.5rem', padding: '1rem', borderRadius: '1rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontWeight: 900, fontSize: '0.875rem', cursor: 'pointer' }}>REINICIAR SERVICIOS</button>
+                        <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '1.5rem' }}>Guardar Cambios</h2>
+                        <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '2rem' }}>Asegúrate de revisar todos los ajustes antes de guardar ya que se aplicarán en tiempo real a todos los usuarios.</p>
+                        <button
+                            onClick={handleSaveGlobal}
+                            style={{
+                                width: '100%', padding: '1rem', borderRadius: '1rem',
+                                background: saved ? '#4cd137' : 'var(--accent-primary)',
+                                border: 'none', color: '#fff', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer',
+                                transition: 'all 0.3s', boxShadow: saved ? '0 8px 24px rgba(76,209,55,0.4)' : '0 8px 24px rgba(0,160,233,0.3)'
+                            }}
+                        >
+                            {saved ? '¡TODO GUARDADO!' : 'GUARDAR AJUSTES GLOBALES'}
+                        </button>
                     </div>
                 </div>
             </div>

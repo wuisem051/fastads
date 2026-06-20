@@ -6,7 +6,7 @@ import {
     onAuthStateChanged,
     updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 const AuthContext = createContext(null);
@@ -22,9 +22,21 @@ export const AuthProvider = ({ children }) => {
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const register = async (email, password, displayName) => {
+    const register = async (email, password, displayName, referralCode = null) => {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(cred.user, { displayName });
+
+        let referredBy = null;
+        if (referralCode) {
+            try {
+                const q = query(collection(db, 'users'), where('referralCode', '==', referralCode.toUpperCase()));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    referredBy = snap.docs[0].id;
+                }
+            } catch (e) { console.error("Error finding sponsor:", e); }
+        }
+
         // Create Firestore profile
         await setDoc(doc(db, 'users', cred.user.uid), {
             uid: cred.user.uid,
@@ -34,8 +46,10 @@ export const AuthProvider = ({ children }) => {
             totalEarnings: 0,
             adsWatched: 0,
             referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+            referredBy: referredBy,
             createdAt: serverTimestamp(),
-            role: 'user'
+            role: 'user',
+            status: 'Active'
         });
         return cred;
     };

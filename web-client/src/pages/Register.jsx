@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Zap, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 export default function Register() {
     const { register } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const referralCode = searchParams.get('ref');
 
     const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
     const [showPass, setShowPass] = useState(false);
@@ -49,7 +51,7 @@ export default function Register() {
         }
         setLoading(true);
         try {
-            await register(form.email, form.password, form.name);
+            await register(form.email, form.password, form.name, referralCode);
             navigate('/dashboard');
         } catch (err) {
             setError(errorMessages[err.code] || 'Error al registrarse. Intenta de nuevo.');
