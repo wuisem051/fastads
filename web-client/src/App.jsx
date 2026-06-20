@@ -16,6 +16,7 @@ import { motion } from 'framer-motion';
 // Auth
 import { useAuth } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
+import Login from './pages/Login';
 import Register from './pages/Register';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
