@@ -165,6 +165,29 @@ export default function MainLayout({ children }) {
         return () => clearInterval(interval);
     }, [currentUser]);
 
+    // Dynamic SEO Implementation
+    useEffect(() => {
+        const fetchSEO = async () => {
+            try {
+                const snap = await getDocs(query(collection(db, 'settings')));
+                const settings = snap.docs.find(d => d.id === 'general')?.data();
+                if (settings) {
+                    if (settings.seoTitle) document.title = settings.seoTitle;
+                    if (settings.seoDescription) {
+                        let metaDesc = document.querySelector('meta[name="description"]');
+                        if (!metaDesc) {
+                            metaDesc = document.createElement('meta');
+                            metaDesc.name = 'description';
+                            document.head.appendChild(metaDesc);
+                        }
+                        metaDesc.content = settings.seoDescription;
+                    }
+                }
+            } catch (e) { console.error("SEO Error:", e); }
+        };
+        fetchSEO();
+    }, []);
+
     // Global Extension Listener
     useEffect(() => {
         const handleExtensionMessage = async (event) => {

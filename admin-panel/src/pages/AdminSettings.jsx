@@ -78,6 +78,8 @@ export default function AdminSettings() {
     const [brandName, setBrandName] = useState(localStorage.getItem('brand_name') || 'FASTADS');
     const [previewLogo, setPreviewLogo] = useState(localStorage.getItem('brand_logo') || logoImg);
     const [referralPercent, setReferralPercent] = useState(10);
+    const [seoTitle, setSeoTitle] = useState('');
+    const [seoDescription, setSeoDescription] = useState('');
     const [saved, setSaved] = useState(false);
     const [loading, setLoading] = useState(true);
     const fileRef = useRef();
@@ -91,6 +93,8 @@ export default function AdminSettings() {
                     setBrandName(data.brandName || 'FASTADS');
                     setPreviewLogo(data.brandLogo || logoImg);
                     setReferralPercent(data.referralPercent || 10);
+                    setSeoTitle(data.seoTitle || 'FastAds - Gana dinero viendo anuncios');
+                    setSeoDescription(data.seoDescription || 'La plataforma líder para ganar criptomonedas de forma automatizada.');
                     localStorage.setItem('brand_name', data.brandName || 'FASTADS');
                     localStorage.setItem('brand_logo', data.brandLogo || logoImg);
                 }
@@ -116,6 +120,8 @@ export default function AdminSettings() {
                 brandName,
                 brandLogo: previewLogo,
                 referralPercent: parseFloat(referralPercent),
+                seoTitle,
+                seoDescription,
                 updatedAt: serverTimestamp()
             });
             localStorage.setItem('brand_name', brandName);
@@ -231,11 +237,27 @@ export default function AdminSettings() {
 
                     <div style={cardStyle}>
                         <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Globe size={22} color="var(--accent-primary)" /> Configuración de Red
+                            <Globe size={22} color="#9b59b6" /> SEO & Marketing
                         </h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <SettingRow icon={Bell} title="Notificaciones Push" desc="Alertas de navegador activas" active={true} />
-                            <SettingRow icon={Database} title="Copia de Seguridad" desc="Automatizada cada 24 horas" active={true} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Título de la Web (SEO)</label>
+                                <input
+                                    style={inputStyle}
+                                    value={seoTitle}
+                                    onChange={(e) => setSeoTitle(e.target.value)}
+                                    placeholder="Ej: FastAds - Gana dinero online"
+                                />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Meta Descripción</label>
+                                <textarea
+                                    style={{ ...inputStyle, minHeight: '80px', resize: 'none', fontFamily: 'inherit' }}
+                                    value={seoDescription}
+                                    onChange={(e) => setSeoDescription(e.target.value)}
+                                    placeholder="Describe brevemente tu plataforma para Google..."
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
