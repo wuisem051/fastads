@@ -16,16 +16,10 @@ import {
     Eye
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
-
-// Read branding from localStorage (set by Admin panel)
-const getBrand = () => ({
-    name: localStorage.getItem('brand_name') || 'FASTADS',
-    logo: localStorage.getItem('brand_logo') || logoImg,
-});
 
 const menuItems = [
     { icon: <Home size={20} />, label: 'Dashboard', path: '/dashboard' },
@@ -36,8 +30,7 @@ const menuItems = [
     { icon: <SettingsIcon size={20} />, label: 'Ajustes', path: '/settings' },
 ];
 
-const Sidebar = () => {
-    const brand = getBrand();
+const Sidebar = ({ brand }) => {
     return (
         <aside style={{
             width: '16rem',
@@ -98,7 +91,22 @@ export default function MainLayout({ children }) {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [showAdConfirmation, setShowAdConfirmation] = useState(null);
+    const [brand, setBrand] = useState({ name: 'FASTADS', logo: logoImg });
     const navigate = useNavigate();
+
+    // Sync branding with Firestore
+    useEffect(() => {
+        const unsub = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                setBrand({
+                    name: data.brandName || 'FASTADS',
+                    logo: data.brandLogo || logoImg
+                });
+            }
+        });
+        return () => unsub();
+    }, []);
     // Sync balance with Extension
     useEffect(() => {
         const sync = () => {
@@ -278,7 +286,7 @@ export default function MainLayout({ children }) {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f4f6f7' }}>
-            <Sidebar />
+            <Sidebar brand={brand} />
 
             <main style={{ marginLeft: '16rem', minHeight: '100vh' }}>
                 {/* Header */}

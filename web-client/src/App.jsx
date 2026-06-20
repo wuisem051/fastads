@@ -18,7 +18,7 @@ import { useAuth } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 
 // Layouts & Pages
@@ -84,13 +84,10 @@ const LandingPage = () => {
   const [content, setContent] = React.useState(null);
 
   React.useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'landing'));
-        if (snap.exists()) setContent(snap.data());
-      } catch (e) { console.error(e); }
-    };
-    fetchContent();
+    const unsub = onSnapshot(doc(db, 'settings', 'landing'), (snap) => {
+      if (snap.exists()) setContent(snap.data());
+    });
+    return () => unsub();
   }, []);
 
   // Use defaults if not fetched or not set
