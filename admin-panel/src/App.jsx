@@ -14,6 +14,7 @@ import UserManager from './pages/UserManager';
 import Withdrawals from './pages/Withdrawals';
 import NewsEditor from './pages/NewsEditor';
 import AdminSettings from './pages/AdminSettings';
+import LandingEditor from './pages/LandingEditor';
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/withdrawals" element={<PrivateRoute><AdminLayout><Withdrawals /></AdminLayout></PrivateRoute>} />
         <Route path="/news" element={<PrivateRoute><AdminLayout><NewsEditor /></AdminLayout></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><AdminLayout><AdminSettings /></AdminLayout></PrivateRoute>} />
+        <Route path="/landing" element={<PrivateRoute><AdminLayout><LandingEditor /></AdminLayout></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

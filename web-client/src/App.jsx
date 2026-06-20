@@ -16,8 +16,9 @@ import { motion } from 'framer-motion';
 // Auth
 import { useAuth } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
-import Login from './pages/Login';
 import Register from './pages/Register';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 // Layouts & Pages
 import MainLayout from './layouts/MainLayout';
@@ -79,6 +80,33 @@ const FeatureCard = ({ icon: Icon, title, desc, delay }) => (
 );
 
 const LandingPage = () => {
+  const [content, setContent] = React.useState(null);
+
+  React.useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'landing'));
+        if (snap.exists()) setContent(snap.data());
+      } catch (e) { console.error(e); }
+    };
+    fetchContent();
+  }, []);
+
+  // Use defaults if not fetched or not set
+  const c = {
+    heroTitle: content?.heroTitle || 'Transforma tu tiempo online en ingresos reales',
+    heroSubtitle: content?.heroSubtitle || 'Únete a la red publicitaria más transparente. Visualiza anuncios, visita sitios seleccionados y gana dinero directamente en tu billetera digital. Sin trucos, solo resultados.',
+    heroCta: content?.heroCta || 'COMENZAR GRATIS',
+    statsUsers: content?.statsUsers || '12K+',
+    statsAds: content?.statsAds || '4M+',
+    statsPaid: content?.statsPaid || '$250K',
+    statsUptime: content?.statsUptime || '99%',
+    dashboardTitle: content?.dashboardTitle || 'Dashboard en vivo',
+    dashboardCardLabel: content?.dashboardCardLabel || 'Balance de Red',
+    dashboardCardValue: content?.dashboardCardValue || '$1,240.50',
+    dashboardCardPercent: content?.dashboardCardPercent || '+12.5%'
+  };
+
   return (
     <div className="bg-primary text-white selection:bg-accent-primary/30">
       <Navbar />
@@ -98,16 +126,16 @@ const LandingPage = () => {
               <span className="text-xs font-bold tracking-widest text-accent-primary uppercase">Nueva Actualización 2.0</span>
             </div>
             <h1 className="text-7xl font-black leading-[1.1] mb-8 tracking-tighter">
-              Transforma tu <br />
-              <span className="gradient-text italic">tiempo online</span> <br />
-              en ingresos reales
+              {c.heroTitle.split('\n').map((line, idx) => (
+                <React.Fragment key={idx}>{line}<br /></React.Fragment>
+              ))}
             </h1>
             <p className="text-dim text-xl mb-12 max-w-xl leading-relaxed font-medium">
-              Únete a la red publicitaria más transparente. Visualiza anuncios, visita sitios seleccionados y gana dinero directamente en tu billetera digital. Sin trucos, solo resultados.
+              {c.heroSubtitle}
             </p>
             <div className="flex items-center gap-6" style={{ display: 'flex', gap: '1.5rem' }}>
               <a href="/dashboard" className="px-10 py-4 rounded-xl flex items-center gap-3 text-lg font-black transition-all hover:scale-105" style={{ background: 'var(--accent-secondary)', color: 'white', textDecoration: 'none', boxShadow: '0 8px 25px rgba(0,160,233,0.3)' }}>
-                CREAR MI CUENTA <ArrowRight size={24} />
+                {c.heroCta} <ArrowRight size={24} />
               </a>
               <div className="flex flex-col">
                 <div className="flex -space-x-2">
@@ -115,7 +143,7 @@ const LandingPage = () => {
                     <div key={i} className="w-8 h-8 rounded-full border-2 border-primary bg-white/10 flex items-center justify-center text-[10px] font-bold">U{i}</div>
                   ))}
                 </div>
-                <span className="text-[10px] font-bold text-dim mt-1">+12,000 USUARIOS</span>
+                <span className="text-[10px] font-bold text-dim mt-1">{c.statsUsers} USUARIOS</span>
               </div>
             </div>
           </motion.div>
@@ -132,7 +160,7 @@ const LandingPage = () => {
                 <div className="flex justify-between items-center mb-10">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-accent-primary"></div>
-                    <p className="text-[10px] font-black text-dim uppercase tracking-widest">Dashboard en vivo</p>
+                    <p className="text-[10px] font-black text-dim uppercase tracking-widest">{c.dashboardTitle}</p>
                   </div>
                   <div className="w-10 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
                     <div className="w-4 h-1.5 bg-accent-primary rounded-full animate-pulse"></div>
@@ -144,10 +172,10 @@ const LandingPage = () => {
                   <div className="p-8 rounded-[2rem]" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                       <div>
-                        <p style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '6px' }}>Balance de Red</p>
-                        <h3 className="font-digital" style={{ fontSize: '2.5rem', color: '#fff' }}>$1,240.50</h3>
+                        <p style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '6px' }}>{c.dashboardCardLabel}</p>
+                        <h3 className="font-digital" style={{ fontSize: '2.5rem', color: '#fff' }}>{c.dashboardCardValue}</h3>
                       </div>
-                      <div style={{ padding: '8px 12px', borderRadius: '10px', background: 'rgba(76,209,55,0.1)', color: '#4cd137', fontSize: '10px', fontWeight: 900 }}>+12.5%</div>
+                      <div style={{ padding: '8px 12px', borderRadius: '10px', background: 'rgba(76,209,55,0.1)', color: '#4cd137', fontSize: '10px', fontWeight: 900 }}>{c.dashboardCardPercent}</div>
                     </div>
                     {/* Micro chart placeholder */}
                     <div style={{ height: '40px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
@@ -186,19 +214,19 @@ const LandingPage = () => {
       <section id="stats" className="py-24 border-y border-white/5 bg-white/[0.01]">
         <div className="container grid grid-cols-2 lg:grid-cols-4 gap-12" style={{ display: 'grid' }}>
           <div className="text-center group">
-            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">12K+</h3>
+            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">{c.statsUsers}</h3>
             <p className="text-dim font-bold text-xs uppercase tracking-widest">Usuarios Activos</p>
           </div>
           <div className="text-center group">
-            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">4M+</h3>
+            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">{c.statsAds}</h3>
             <p className="text-dim font-bold text-xs uppercase tracking-widest">Anuncios Vistos</p>
           </div>
           <div className="text-center group">
-            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">$250K</h3>
+            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">{c.statsPaid}</h3>
             <p className="text-dim font-bold text-xs uppercase tracking-widest">Pagado a Usuarios</p>
           </div>
           <div className="text-center group">
-            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">99%</h3>
+            <h3 className="text-5xl font-black mb-2 group-hover:scale-110 transition-transform inline-block">{c.statsUptime}</h3>
             <p className="text-dim font-bold text-xs uppercase tracking-widest">Uptime Plataforma</p>
           </div>
         </div>

@@ -9,7 +9,8 @@ import {
     LogOut,
     Bell,
     Search,
-    TrendingUp
+    TrendingUp,
+    Home
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -27,6 +28,7 @@ const menuItems = [
     { icon: <Users size={20} />, label: 'Usuarios', path: '/users' },
     { icon: <Wallet size={20} />, label: 'Pagos / Retiros', path: '/withdrawals' },
     { icon: <FileText size={20} />, label: 'Noticias', path: '/news' },
+    { icon: <Home size={20} />, label: 'Editor Home', path: '/landing' },
     { icon: <Settings size={20} />, label: 'Ajustes App', path: '/settings' },
 ];
 
