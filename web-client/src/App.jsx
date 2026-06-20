@@ -352,6 +352,26 @@ const LandingPage = () => {
 };
 
 export default function App() {
+  // SEO global: escucha cambios en settings/general y actualiza title + meta en TODA la app
+  React.useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.seoTitle) document.title = data.seoTitle;
+        if (data.seoDescription) {
+          let meta = document.querySelector('meta[name="description"]');
+          if (!meta) {
+            meta = document.createElement('meta');
+            meta.name = 'description';
+            document.head.appendChild(meta);
+          }
+          meta.content = data.seoDescription;
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -371,3 +391,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
