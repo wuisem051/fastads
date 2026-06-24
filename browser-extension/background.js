@@ -46,7 +46,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             photoURL: ''
         };
         chrome.storage.local.set(userState);
-        chrome.runtime.sendMessage({ type: 'UPDATE_UI', data: userState });
+        safeInternalNotify({ type: 'UPDATE_UI', data: userState });
     }
 
     if (message.type === 'SYNC_USER_DATA') {
@@ -71,8 +71,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         chrome.storage.local.set(userState);
-        // Refresh popup if it's open
-        chrome.runtime.sendMessage({ type: 'UPDATE_UI', data: userState });
+        safeInternalNotify({ type: 'UPDATE_UI', data: userState });
     }
 
     if (message.type === 'SIMULATE_AD') {
@@ -154,12 +153,30 @@ function startAdTimer(duration, reward, tabId, adId, sourceTabId, adTitle) {
     }, 1000);
 }
 
+/**
+ * Safely sends a message to the internal runtime (popup) without triggering
+ * logged errors in chrome://extensions if the receiving end is closed.
+ */
+function safeInternalNotify(message) {
+    try {
+        chrome.runtime.sendMessage(message, () => {
+            // This callback suppresses the "Receiving end does not exist" error
+            if (chrome.runtime.lastError) {
+                // Silent intended: the popup is simply not open
+                return;
+            }
+        });
+    } catch (e) {
+        // Just in case catch
+    }
+}
+
 function rewardUser(amount, adId) {
     userState.balance += amount;
     userState.adsViewed += 1;
 
     chrome.storage.local.set(userState, () => {
-        chrome.runtime.sendMessage({ type: 'UPDATE_UI', data: userState });
+        safeInternalNotify({ type: 'UPDATE_UI', data: userState });
 
         // System notification
         try {
