@@ -174,12 +174,20 @@ function startLocalProgressBar(duration) {
     }, 1000);
 }
 
+// Safe wrapper: avoids 'Extension context invalidated' crashes
+function safeRuntimeSend(msg) {
+    try {
+        if (chrome.runtime && chrome.runtime.id) {
+            chrome.runtime.sendMessage(msg);
+        }
+    } catch (e) { /* context invalidated — extension was reloaded */ }
+}
+
 // Listen for messages from the website (Dashboard)
 window.addEventListener('message', (event) => {
     if (event.data.type === 'AD_START') {
         const payload = event.data.payload;
-
-        chrome.runtime.sendMessage({
+        safeRuntimeSend({
             type: 'AD_ACCEPTED',
             adId: payload.id,
             adTitle: payload.title,
@@ -187,25 +195,26 @@ window.addEventListener('message', (event) => {
             reward: parseFloat(payload.reward),
             url: payload.url
         });
-
         startLocalProgressBar(parseInt(payload.duration));
     }
 
     if (event.data.type === 'USER_DATA_SYNC') {
-        chrome.runtime.sendMessage({
-            type: 'SYNC_USER_DATA',
-            payload: event.data.payload
-        });
+        safeRuntimeSend({ type: 'SYNC_USER_DATA', payload: event.data.payload });
     }
 
     if (event.data.type === 'LOGOUT_USER') {
-        chrome.runtime.sendMessage({ type: 'LOGOUT_USER' });
+        safeRuntimeSend({ type: 'LOGOUT_USER' });
     }
 });
 
 // Notify the web app that the extension is ready
+let readyInterval;
 function notifyReady() {
     try {
+        if (!chrome.runtime || !chrome.runtime.id) {
+            clearInterval(readyInterval);
+            return;
+        }
         chrome.storage.local.get(['balance', 'adsViewed'], (state) => {
             if (chrome.runtime.lastError) return;
             window.postMessage({
@@ -216,31 +225,31 @@ function notifyReady() {
                 official: true
             }, '*');
         });
-    } catch (e) { }
+    } catch (e) {
+        clearInterval(readyInterval);
+    }
 }
 notifyReady();
-setInterval(notifyReady, 5000);
+readyInterval = setInterval(notifyReady, 5000);
 
 // Listen for a ping from the web app
 window.addEventListener('message', (e) => {
     if (e.data.type === 'PING_EXT') notifyReady();
 });
 
-chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'SHOW_AD_INVITATION') {
-        const adData = {
-            id: message.payload.id,
-            duration: message.payload.timer,
-            reward: message.payload.reward,
-            url: message.payload.url
-        };
-        showAdInvitation(adData);
-    }
-
-    if (message.type === 'AD_COMPLETED_SUCCESS' || message.type === 'AD_CANCELLED') {
-        window.postMessage({
-            type: message.type,
-            payload: message.payload
-        }, '*');
-    }
-});
+try {
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'SHOW_AD_INVITATION') {
+            const adData = {
+                id: message.payload.id,
+                duration: message.payload.timer,
+                reward: message.payload.reward,
+                url: message.payload.url
+            };
+            showAdInvitation(adData);
+        }
+        if (message.type === 'AD_COMPLETED_SUCCESS' || message.type === 'AD_CANCELLED') {
+            window.postMessage({ type: message.type, payload: message.payload }, '*');
+        }
+    });
+} catch (e) { /* context invalidated */ }
