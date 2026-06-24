@@ -243,7 +243,20 @@ export default function UserManager() {
                                                     <DollarSign size={18} />
                                                 </button>
                                             )}
-                                            <button style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} title="Historial">
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm(`¿Resetear saldo de ${user.name || user.email}?`)) return;
+                                                    try {
+                                                        const userRef = doc(db, 'users', user.id);
+                                                        console.log("Resetting single user:", user.id);
+                                                        await updateDoc(userRef, { balance: 0, totalEarnings: 0, adsWatched: 0, faucetClaims: 0 });
+                                                        alert("Usuario reseteado.");
+                                                        fetchUsers();
+                                                    } catch (e) { console.error(e); alert("Error al resetear individualmente."); }
+                                                }}
+                                                style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: '#6366f1' }}
+                                                title="Resetear Balance Individual"
+                                            >
                                                 <History size={18} />
                                             </button>
                                             <button
