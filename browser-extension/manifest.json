@@ -1,10 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "AdShare - Gana Navegando",
-  "version": "1.0.0",
-  "description": "Visualiza anuncios seleccionados por AdShare y gana recompensas directamente en tu cuenta.",
+  "name": "FastAds - Herramienta Oficial",
+  "version": "1.0.1",
+  "description": "Extensión oficial de FastAds para la visualización segura de anuncios y sincronización de recompensas.",
+  "icons": {
+    "128": "icons/icon128.png"
+  },
   "action": {
-    "default_popup": "popup/popup.html"
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "128": "icons/icon128.png"
+    }
   },
   "permissions": [
     "storage",

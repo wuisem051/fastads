@@ -6,79 +6,92 @@
     <style>
         :root {
             --header-bg: #222d32;
-            --section-bg: #f4f6f7;
-            --text-main: #333333;
-            --text-grey: #7f8c8d;
+            --section-bg: #f8fafc;
+            --text-main: #1e293b;
+            --text-dim: #64748b;
             --accent-blue: #00a0e9;
-            --accent-green: #4cd137;
-            --border-color: #e6e9ed;
+            --accent-green: #22c55e;
+            --border-color: #e2e8f0;
+            --success-bg: #f0fdf4;
+            --success-text: #16a34a;
         }
 
         body {
             width: 320px;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #ffffff;
             color: var(--text-main);
         }
 
-        /* Header */
         header {
             background: var(--header-bg);
-            padding: 15px;
+            padding: 20px 15px;
             text-align: center;
-            position: relative;
         }
 
         .logo {
             color: #ffffff;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
+            gap: 6px;
         }
 
-        .logo span {
-            color: var(--accent-green);
+        .logo b {
+            color: var(--accent-blue);
         }
 
-        .version {
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            color: #5d6d7e;
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--success-bg);
+            color: var(--success-text);
+            padding: 4px 10px;
+            border-radius: 99px;
             font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-top: 10px;
+            border: 1px solid #bbf7d0;
         }
 
-        /* Section Titles */
         .section-header {
             background: var(--section-bg);
-            padding: 8px 15px;
-            color: var(--text-grey);
-            font-size: 11px;
-            font-weight: 600;
+            padding: 10px 15px;
+            color: var(--text-dim);
+            font-size: 10px;
+            font-weight: 800;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
             border-bottom: 1px solid var(--border-color);
         }
 
-        /* User Info */
-        .user-info {
+        .user-card {
             padding: 20px 15px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         .avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: #eee;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--accent-blue);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 18px;
             overflow: hidden;
-            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,160,233,0.2);
         }
 
         .avatar img {
@@ -89,78 +102,107 @@
 
         .user-details h3 {
             margin: 0;
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 15px;
+            font-weight: 700;
         }
 
-        .user-details p {
-            margin: 2px 0 0;
-            color: var(--text-grey);
+        .balance-box {
+            margin-top: 4px;
             font-size: 13px;
+            color: var(--text-dim);
+            font-weight: 500;
         }
 
-        .balance-val {
-            color: var(--text-main);
-            font-weight: bold;
+        .balance-box span {
+            color: var(--accent-blue);
+            font-weight: 800;
+            font-family: monospace;
         }
 
-        /* Button */
-        .btn-container {
+        .action-area {
             padding: 0 15px 20px;
         }
 
         .primary-btn {
             width: 100%;
-            background: var(--accent-blue);
+            background: #1e293b;
             color: #ffffff;
             border: none;
             padding: 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .primary-btn:hover {
-            background: #0090d1;
+            background: #0f172a;
+            transform: translateY(-1px);
         }
 
-        /* Stats List */
-        .stats-list {
-            padding: 0;
-            margin: 0;
-            list-style: none;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border-color);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .stat-item {
+            background: #fff;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 10px;
+            color: var(--text-dim);
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .security-note {
             padding: 12px 15px;
-            border-bottom: 1px solid var(--border-color);
+            font-size: 11px;
+            color: var(--text-dim);
+            line-height: 1.4;
             display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            color: var(--text-grey);
+            gap: 8px;
+            background: #fafafa;
         }
 
-        .stat-val {
-            color: #000;
-            font-weight: bold;
-        }
-
-        /* Footer Toggle */
         footer {
-            padding: 12px 15px;
+            padding: 15px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            background: #ffffff;
+            justify-content: space-between;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .switch {
             position: relative;
             display: inline-block;
-            width: 44px;
-            height: 24px;
+            width: 40px;
+            height: 22px;
         }
 
         .switch input {
@@ -176,20 +218,20 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 22px;
         }
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px;
-            width: 18px;
+            height: 16px;
+            width: 16px;
             left: 3px;
             bottom: 3px;
             background-color: white;
-            transition: .4s;
+            transition: .3s;
             border-radius: 50%;
         }
 
@@ -198,62 +240,77 @@
         }
 
         input:checked+.slider:before {
-            transform: translateX(20px);
+            transform: translateX(18px);
         }
 
-        .toggle-label {
-            font-size: 13px;
-            color: var(--text-grey);
-            font-style: italic;
+        .status-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+        }
+
+        .status-text.active {
+            color: var(--success-text);
         }
     </style>
 </head>
 
 <body>
     <header>
-        <span class="version">ver 1.0.0</span>
-        <div class="logo">FAST<span style="color: var(--accent-green)">ADS</span> <span
-                style="font-size: 0.9em">⚡</span></div>
+        <div class="logo">FAST<b>ADS</b></div>
+        <div class="verified-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Herramienta Verificada
+        </div>
     </header>
 
-    <div class="section-header">CUENTA</div>
+    <div class="section-header">Resumen de Cuenta</div>
 
-    <div class="user-info">
+    <div class="user-card">
         <div class="avatar" id="avatar-container">
-            <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" id="user-avatar" alt="Avatar">
+            <img src="https://ui-avatars.com/api/?name=User&background=00a0e9&color=fff" id="user-avatar" alt="Avatar">
         </div>
         <div class="user-details">
-            <h3 id="user-name">Usuario</h3>
-            <p>Balance: <span class="balance-val" id="balance">0.0000 USD</span></p>
+            <h3 id="user-name">Cargando...</h3>
+            <div class="balance-box">Saldo: <span id="balance">$0.0000</span></div>
         </div>
     </div>
 
-    <div class="btn-container">
-        <button class="primary-btn" id="go-to-dashboard">Ir a la cuenta</button>
+    <div class="action-area">
+        <button class="primary-btn" id="go-to-dashboard">
+            Ver Dashboard Completo
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 22 3 22 10"></polyline><line x1="10" y1="14" x2="22" y2="2"></line></svg>
+        </button>
     </div>
 
-    <div class="section-header">ESTADÍSTICAS DE HOY</div>
+    <div class="section-header">Actividad de Hoy</div>
 
-    <ul class="stats-list">
-        <li class="stat-item">
-            <span>Téasers vistos:</span>
-            <span class="stat-val" id="teasers-viewed">0</span>
-        </li>
-        <li class="stat-item">
-            <span>Popups vistos:</span>
-            <span class="stat-val" id="popups-viewed">0</span>
-        </li>
-    </ul>
+    <div class="stats-grid">
+        <div class="stat-item">
+            <span class="stat-label">Anuncios</span>
+            <span class="stat-value" id="teasers-viewed">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Popups</span>
+            <span class="stat-value" id="popups-viewed">0</span>
+        </div>
+    </div>
+
+    <div class="security-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Tus datos de navegación están protegidos. No recolectamos información personal fuera de tus ganancias.</span>
+    </div>
 
     <footer>
-        <label class="switch">
-            <input type="checkbox" id="ad-toggle" checked>
-            <span class="slider"></span>
-        </label>
-        <span class="toggle-label" id="toggle-text">Anuncios activados</span>
+        <div class="toggle-group">
+            <label class="switch">
+                <input type="checkbox" id="ad-toggle" checked>
+                <span class="slider"></span>
+            </label>
+            <span class="status-text active" id="toggle-text">Protección Activa</span>
+        </div>
+        <span style="font-size: 10px; color: var(--text-dim); font-weight: 600;">v1.0.1</span>
     </footer>
-
-
 
     <script src="popup.js"></script>
 </body>

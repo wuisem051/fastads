@@ -13,9 +13,10 @@ import {
     History,
     LogOut as LogoutIcon,
     Plus,
-    Eye
+    Eye,
+    Droplet
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ const menuItems = [
     { icon: <TrendingUp size={20} />, label: 'Ganancias', path: '/earnings' },
     { icon: <Wallet size={20} />, label: 'Retiros', path: '/withdrawals' },
     { icon: <Users size={20} />, label: 'Referidos', path: '/referrals' },
+    { icon: <Droplet size={20} />, label: 'Grifo', path: '/faucet' },
     { icon: <Bell size={20} />, label: 'Noticias', path: '/news' },
     { icon: <SettingsIcon size={20} />, label: 'Ajustes', path: '/settings' },
 ];
@@ -46,12 +48,25 @@ const Sidebar = ({ brand }) => {
             overflowY: 'auto',
         }}>
             {/* Logo */}
-            <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <Link to="/dashboard" style={{
+                padding: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                textDecoration: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s'
+            }}
+                onMouseOver={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseOut={e => e.currentTarget.style.opacity = '1'}
+            >
                 <img src={brand.logo} alt="logo" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.625rem', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,160,233,0.35)' }} />
                 <span style={{ fontSize: '1.05rem', fontWeight: 900, letterSpacing: '-0.03em' }}>
                     {brand.name}
                 </span>
-            </div>
+            </Link>
 
             {/* Nav */}
             <nav style={{ flex: 1, paddingTop: '1rem' }}>
@@ -92,9 +107,9 @@ export default function MainLayout({ children }) {
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [notifsRead, setNotifsRead] = useState(() => localStorage.getItem('notifs_read') === 'true');
     const [showAdConfirmation, setShowAdConfirmation] = useState(null);
-    const [brand, setBrand] = useState({ name: 'FASTADS', logo: logoImg });
-    const [extensionUrl, setExtensionUrl] = useState('');
-    const navigate = useNavigate();
+    const [isExtensionActive, setIsExtensionActive] = useState(false);
+    const [lastExtensionPing, setLastExtensionPing] = useState(0);
+    const [showExtMissingMessage, setShowExtMissingMessage] = useState(false);
 
     // Sync branding + SEO with Firestore (real-time)
     useEffect(() => {
@@ -123,6 +138,16 @@ export default function MainLayout({ children }) {
         });
         return () => unsub();
     }, []);
+
+    // Check extension activity periodically
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const isActive = Date.now() - lastExtensionPing < 5000;
+            setIsExtensionActive(isActive);
+        }, 2000);
+        return () => clearInterval(interval);
+    }, [lastExtensionPing]);
+
     // Sync balance with Extension
     useEffect(() => {
         const sync = () => {
@@ -150,6 +175,8 @@ export default function MainLayout({ children }) {
     // Global Ad Checker
     useEffect(() => {
         if (!currentUser) return;
+        // Check if extension earnings are enabled in user profile (default true)
+        if (userProfile?.extensionEarningsEnabled === false) return;
 
         const checkAds = async () => {
             try {
@@ -187,7 +214,7 @@ export default function MainLayout({ children }) {
         const interval = setInterval(checkAds, 60000); // Check every minute
         checkAds();
         return () => clearInterval(interval);
-    }, [currentUser]);
+    }, [currentUser, userProfile, showAdConfirmation]);
 
     // Dynamic SEO Implementation
     useEffect(() => {
@@ -216,8 +243,11 @@ export default function MainLayout({ children }) {
     useEffect(() => {
         const handleExtensionMessage = async (event) => {
             // Extension says it's ready, so we send our current user data
-            if (event.data.type === 'EXTENSION_READY') {
-                if (userProfile && currentUser) {
+            if (event.data.type === 'EXTENSION_READY' || event.data.type === 'PONG_EXT') {
+                setLastExtensionPing(Date.now());
+                setIsExtensionActive(true);
+
+                if (event.data.type === 'EXTENSION_READY' && userProfile && currentUser) {
                     // Sync our truth to extension
                     window.postMessage({
                         type: 'USER_DATA_SYNC',
@@ -517,40 +547,70 @@ export default function MainLayout({ children }) {
                 {showAdConfirmation && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                         <div style={{ background: '#fff', borderRadius: '1.25rem', width: '100%', maxWidth: '400px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                            <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', overflow: 'hidden' }}>
-                                {showAdConfirmation.logoUrl ? (
-                                    <img src={showAdConfirmation.logoUrl} alt="Ad Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                    <Plus size={32} />
-                                )}
-                            </div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>{showAdConfirmation.title}</h3>
-                            <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-                                {showAdConfirmation.description || `Ver el sitio durante ${showAdConfirmation.timer} seg y ganar $${showAdConfirmation.reward}.`}
-                                <br />
-                                <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 900, marginTop: '8px', display: 'block' }}>
-                                    ¡Gana {showAdConfirmation.reward} USD ahora!
-                                </span>
-                            </p>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <button onClick={() => setShowAdConfirmation(null)} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
-                                <button onClick={() => {
-                                    window.postMessage({
-                                        type: 'AD_START',
-                                        payload: {
-                                            id: showAdConfirmation.id,
-                                            duration: showAdConfirmation.timer,
-                                            reward: showAdConfirmation.reward,
-                                            url: showAdConfirmation.url,
-                                            title: showAdConfirmation.title
-                                        }
-                                    }, '*');
-                                    setShowAdConfirmation(null);
-                                }} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent-secondary)', color: '#fff', fontWeight: 900, cursor: 'pointer', boxShadow: '0 8px 15px rgba(0,160,233,0.2)' }}>ACEPTAR</button>
-                            </div>
+                            {showExtMissingMessage ? (
+                                <>
+                                    <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                                        <Plus size={32} style={{ transform: 'rotate(45deg)' }} />
+                                    </div>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>Extensión necesaria</h3>
+                                    <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                                        Instala la extensión para disfrutar de estos ingresos. Es necesaria para validar tus visualizaciones correctamente.
+                                    </p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        <a
+                                            href={extensionUrl || '#'}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{ padding: '0.875rem', borderRadius: '0.75rem', background: 'var(--accent-secondary)', color: '#fff', fontWeight: 900, textDecoration: 'none', fontSize: '0.875rem' }}
+                                        >
+                                            DESCARGAR EXTENSIÓN
+                                        </a>
+                                        <button onClick={() => { setShowAdConfirmation(null); setShowExtMissingMessage(false); }} style={{ padding: '0.875rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dim)' }}>Cerrar</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div style={{ width: '4rem', height: '4rem', borderRadius: '1.25rem', background: 'rgba(0,160,233,0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', overflow: 'hidden' }}>
+                                        {showAdConfirmation.logoUrl ? (
+                                            <img src={showAdConfirmation.logoUrl} alt="Ad Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <Plus size={32} />
+                                        )}
+                                    </div>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.75rem' }}>{showAdConfirmation.title}</h3>
+                                    <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+                                        {showAdConfirmation.description || `Ver el sitio durante ${showAdConfirmation.timer} seg y ganar $${showAdConfirmation.reward}.`}
+                                        <br />
+                                        <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 900, marginTop: '8px', display: 'block' }}>
+                                            ¡Gana {showAdConfirmation.reward} USD ahora!
+                                        </span>
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button onClick={() => setShowAdConfirmation(null)} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: '1px solid #e1e4e8', background: 'none', fontWeight: 700, cursor: 'pointer', color: 'var(--text-dim)' }}>CANCELAR</button>
+                                        <button onClick={() => {
+                                            if (!isExtensionActive) {
+                                                setShowExtMissingMessage(true);
+                                                return;
+                                            }
+                                            window.postMessage({
+                                                type: 'AD_START',
+                                                payload: {
+                                                    id: showAdConfirmation.id,
+                                                    duration: showAdConfirmation.timer,
+                                                    reward: showAdConfirmation.reward,
+                                                    url: showAdConfirmation.url,
+                                                    title: showAdConfirmation.title
+                                                }
+                                            }, '*');
+                                            setShowAdConfirmation(null);
+                                        }} style={{ flex: 1, padding: '0.875rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent-secondary)', color: '#fff', fontWeight: 900, cursor: 'pointer', boxShadow: '0 8px 15px rgba(0,160,233,0.2)' }}>ACEPTAR</button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
+
             </main>
             <style>{`
                 @keyframes dropdown-in {

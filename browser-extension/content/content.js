@@ -1,58 +1,117 @@
-// AdShare Content Script - Ad Notification & Progress Bar
-
-console.log('AdShare Extension Active');
+// FastAds Official Content Script
+// This script handles the display of ad invitations and synchronization with the main dashboard.
 
 function showAdInvitation(adData) {
-    if (document.getElementById('adshare-invite-modal')) return;
+    if (document.getElementById('fastads-invite-modal')) return;
 
     const backdrop = document.createElement('div');
-    backdrop.id = 'adshare-invite-modal';
+    backdrop.id = 'fastads-invite-modal';
 
     const styles = `
-        #adshare-invite-modal {
+        #fastads-invite-modal {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 380px;
+            top: 24px;
+            right: 24px;
+            width: 360px;
             background: #ffffff;
-            color: #1a1e27;
+            color: #1e293b;
             padding: 24px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
             z-index: 2147483647;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            border: 1px solid rgba(0,0,0,0.05);
-            animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            animation: fastadsSlideIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
+        @keyframes fastadsSlideIn {
+            from { transform: translateX(120%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
 
-        .adshare-header { font-weight: 700; font-size: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #000; }
-        .adshare-body { font-size: 14px; line-height: 1.6; color: #4b5563; margin-bottom: 24px; }
-        .adshare-footer { display: flex; gap: 12px; justify-content: flex-end; }
-        .adshare-btn { padding: 10px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; }
-        .adshare-btn-accept { background: #00ff88; color: #052e16; }
-        .adshare-btn-cancel { background: #f3f4f6; color: #4b5563; }
-        .adshare-reward { color: #059669; font-weight: 700; }
+        .fastads-header { 
+            font-weight: 800; 
+            font-size: 16px; 
+            margin-bottom: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            color: #0f172a; 
+        }
+        
+        .fastads-tag {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .fastads-body { 
+            font-size: 14px; 
+            line-height: 1.5; 
+            color: #475569; 
+            margin-bottom: 24px; 
+        }
+
+        .fastads-reward-pill {
+            display: inline-block;
+            background: #f0fdf4;
+            color: #16a34a;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
+        .fastads-footer { display: flex; gap: 12px; justify-content: flex-end; }
+        
+        .fastads-btn { 
+            padding: 10px 20px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 13px; 
+            cursor: pointer; 
+            border: none; 
+            transition: all 0.2s;
+        }
+
+        .fastads-btn-accept { 
+            background: #00a0e9; 
+            color: #ffffff; 
+            box-shadow: 0 4px 12px rgba(0,160,233,0.2);
+        }
+        
+        .fastads-btn-accept:hover {
+            background: #008ecc;
+            transform: translateY(-1px);
+        }
+
+        .fastads-btn-cancel { 
+            background: #f1f5f9; 
+            color: #64748b; 
+        }
+
+        .fastads-btn-cancel:hover {
+            background: #e2e8f0;
+        }
 
         /* Top Progress Bar */
-        #adshare-progress-container {
+        #fastads-progress-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 4px;
-            background: rgba(0,0,0,0.1);
+            background: rgba(0,0,0,0.05);
             z-index: 2147483647;
             display: none;
         }
-        #adshare-progress-bar {
+        #fastads-progress-bar {
             height: 100%;
             width: 0%;
-            background: #00ff88;
+            background: #00a0e9;
             transition: width 1s linear;
         }
     `;
@@ -62,29 +121,29 @@ function showAdInvitation(adData) {
     document.head.appendChild(styleSheet);
 
     backdrop.innerHTML = `
-        <div class="adshare-header">
-            <span style="color: #00ff88">⚡</span> Anuncio Disponible
+        <div class="fastads-header">
+            <span>FastAds Official</span>
+            <span class="fastads-tag">NUEVA OFERTA</span>
         </div>
-        <div class="adshare-body">
-            ¿Deseas ver este sitio durante <b>${adData.duration} segundos</b> para ganar <span class="adshare-reward">$${adData.reward.toFixed(4)}</span>?
+        <div class="fastads-body">
+            Gana <span class="fastads-reward-pill">$${adData.reward.toFixed(4)}</span> visualizando este sitio durante <b>${adData.duration} segundos</b>.
         </div>
-        <div class="adshare-footer">
-            <button class="adshare-btn adshare-btn-cancel" id="adshare-cancel">Cancelar</button>
-            <button class="adshare-btn adshare-btn-accept" id="adshare-accept">Aceptar</button>
+        <div class="fastads-footer">
+            <button class="fastads-btn fastads-btn-cancel" id="fastads-cancel">Descartar</button>
+            <button class="fastads-btn fastads-btn-accept" id="fastads-accept">Continuar</button>
         </div>
     `;
 
     document.body.appendChild(backdrop);
 
     const progressContainer = document.createElement('div');
-    progressContainer.id = 'adshare-progress-container';
-    progressContainer.innerHTML = '<div id="adshare-progress-bar"></div>';
+    progressContainer.id = 'fastads-progress-container';
+    progressContainer.innerHTML = '<div id="fastads-progress-bar"></div>';
     document.body.appendChild(progressContainer);
 
-    document.getElementById('adshare-cancel').onclick = () => backdrop.remove();
+    document.getElementById('fastads-cancel').onclick = () => backdrop.remove();
 
-    document.getElementById('adshare-accept').onclick = () => {
-        // Enviar mensaje al background para iniciar el contador en el icono (Badge)
+    document.getElementById('fastads-accept').onclick = () => {
         chrome.runtime.sendMessage({
             type: 'AD_ACCEPTED',
             adId: adData.id,
@@ -93,18 +152,14 @@ function showAdInvitation(adData) {
         });
 
         backdrop.remove();
-
-        // Simular barra de progreso en la página actual
         startLocalProgressBar(adData.duration);
-
-        // Abrir el link directo en una nueva pestaña (opcional, algunos prefieren que sea la misma)
         window.open(adData.url, '_blank');
     };
 }
 
 function startLocalProgressBar(duration) {
-    const container = document.getElementById('adshare-progress-container');
-    const bar = document.getElementById('adshare-progress-bar');
+    const container = document.getElementById('fastads-progress-container');
+    const bar = document.getElementById('fastads-progress-bar');
     if (!container || !bar) return;
 
     container.style.display = 'block';
@@ -114,7 +169,7 @@ function startLocalProgressBar(duration) {
         bar.style.width = `${progress}%`;
         if (progress >= 100) {
             clearInterval(interval);
-            setTimeout(() => container.style.display = 'none', 1000);
+            setTimeout(() => { if (container) container.style.display = 'none'; }, 1000);
         }
     }, 1000);
 }
@@ -122,7 +177,6 @@ function startLocalProgressBar(duration) {
 // Listen for messages from the website (Dashboard)
 window.addEventListener('message', (event) => {
     if (event.data.type === 'AD_START') {
-        console.log('Ad share: Capturando inicio de anuncio desde el sitio');
         const payload = event.data.payload;
 
         chrome.runtime.sendMessage({
@@ -134,7 +188,6 @@ window.addEventListener('message', (event) => {
             url: payload.url
         });
 
-        // Start a local progress bar on the current page to show the user it's working
         startLocalProgressBar(parseInt(payload.duration));
     }
 
@@ -146,22 +199,23 @@ window.addEventListener('message', (event) => {
     }
 });
 
-// Notify the web app that the extension is ready to sync and report current local state
+// Notify the web app that the extension is ready
 function notifyReady() {
     try {
         chrome.storage.local.get(['balance', 'adsViewed'], (state) => {
             if (chrome.runtime.lastError) return;
             window.postMessage({
                 type: 'EXTENSION_READY',
-                version: '1.0.0',
+                version: '1.0.1',
                 localBalance: state.balance || 0,
-                localAds: state.adsViewed || 0
+                localAds: state.adsViewed || 0,
+                official: true
             }, '*');
         });
     } catch (e) { }
 }
 notifyReady();
-setInterval(notifyReady, 3000);
+setInterval(notifyReady, 5000);
 
 // Listen for a ping from the web app
 window.addEventListener('message', (e) => {
@@ -179,7 +233,6 @@ chrome.runtime.onMessage.addListener((message) => {
         showAdInvitation(adData);
     }
 
-    // Capture completion/cancellation from background and relay to Dashboard website
     if (message.type === 'AD_COMPLETED_SUCCESS' || message.type === 'AD_CANCELLED') {
         window.postMessage({
             type: message.type,

@@ -29,6 +29,7 @@ import Withdrawals from './pages/Withdrawals';
 import Referrals from './pages/Referrals';
 import News from './pages/News';
 import Settings from './pages/Settings';
+import Faucet from './pages/Faucet';
 
 const Navbar = () => {
   const { currentUser, logout } = useAuth();
@@ -386,6 +387,7 @@ export default function App() {
         <Route path="/earnings" element={<PrivateRoute><MainLayout><Earnings /></MainLayout></PrivateRoute>} />
         <Route path="/withdrawals" element={<PrivateRoute><MainLayout><Withdrawals /></MainLayout></PrivateRoute>} />
         <Route path="/referrals" element={<PrivateRoute><MainLayout><Referrals /></MainLayout></PrivateRoute>} />
+        <Route path="/faucet" element={<PrivateRoute><MainLayout><Faucet /></MainLayout></PrivateRoute>} />
         <Route path="/news" element={<PrivateRoute><MainLayout><News /></MainLayout></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><MainLayout><Settings /></MainLayout></PrivateRoute>} />
 

@@ -1,5 +1,8 @@
-import React from 'react';
-import { Camera, Mail, User, Lock, CreditCard, Save, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Camera, Mail, User, Lock, CreditCard, Save, ShieldCheck, ToggleLeft, ToggleRight, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const card = {
     background: '#fff',
@@ -37,8 +40,68 @@ const IconWrap = ({ children }) => (
 );
 
 export default function Settings() {
+    const { currentUser, userProfile, fetchProfile } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [formData, setFormData] = useState({
+        displayName: '',
+        email: '',
+        usdt_address: '',
+        ltc_address: '',
+        doge_address: '',
+        extensionEarningsEnabled: true
+    });
+
+    useEffect(() => {
+        if (userProfile) {
+            setFormData({
+                displayName: userProfile.displayName || '',
+                email: userProfile.email || '',
+                usdt_address: userProfile.usdt_address || '',
+                ltc_address: userProfile.ltc_address || '',
+                doge_address: userProfile.doge_address || '',
+                extensionEarningsEnabled: userProfile.extensionEarningsEnabled !== false
+            });
+        }
+    }, [userProfile]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleToggle = () => {
+        setFormData(prev => ({ ...prev, extensionEarningsEnabled: !prev.extensionEarningsEnabled }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setSuccess(false);
+        try {
+            const userRef = doc(db, 'users', currentUser.uid);
+            await updateDoc(userRef, {
+                displayName: formData.displayName,
+                usdt_address: formData.usdt_address,
+                ltc_address: formData.ltc_address,
+                doge_address: formData.doge_address,
+                extensionEarningsEnabled: formData.extensionEarningsEnabled
+            });
+            await fetchProfile(currentUser.uid, currentUser);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            alert("Error al actualizar el perfil.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const focusInput = e => { e.target.style.borderColor = 'var(--accent-secondary)'; e.target.style.background = '#fff'; };
     const blurInput = e => { e.target.style.borderColor = '#e6e9ed'; e.target.style.background = '#f8f9fa'; };
+
+    const firstLetter = (formData.displayName || 'U').charAt(0).toUpperCase();
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
@@ -56,23 +119,33 @@ export default function Settings() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '2rem' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '2rem' }}>
                 {/* Profile Sidebar */}
                 <div>
                     <div style={{ ...card, textAlign: 'center', position: 'sticky', top: '7rem' }}>
                         <div style={{ position: 'relative', width: '9rem', height: '9rem', margin: '0 auto 1.5rem' }}>
                             <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', padding: '3px' }}>
-                                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-primary)' }}>W</div>
+                                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-primary)', overflow: 'hidden' }}>
+                                    {userProfile?.photoURL ? (
+                                        <img src={userProfile.photoURL} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        firstLetter
+                                    )}
+                                </div>
                             </div>
-                            <button className="gradient-btn" style={{ position: 'absolute', bottom: '2px', right: '2px', width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem', border: '3px solid #fff', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <button type="button" className="gradient-btn" style={{ position: 'absolute', bottom: '2px', right: '2px', width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem', border: '3px solid #fff', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <Camera size={18} />
                             </button>
                         </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>Wuisem</h3>
-                        <p style={{ color: 'var(--text-dim)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1.5rem' }}>Miembro desde Junio 2026</p>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '0.25rem' }}>{formData.displayName}</h3>
+                        <p style={{ color: 'var(--text-dim)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1.5rem' }}>
+                            Miembro desde {userProfile?.createdAt ? new Date(userProfile.createdAt.toMillis()).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : 'Junio 2026'}
+                        </p>
                         <div style={{ background: '#f8f9fa', borderRadius: '1rem', padding: '1rem' }}>
                             <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '4px' }}>Tu Rango</p>
-                            <p style={{ fontWeight: 900, color: 'var(--accent-primary)', letterSpacing: '0.04em' }}>PRO MEMBER</p>
+                            <p style={{ fontWeight: 900, color: 'var(--accent-primary)', letterSpacing: '0.04em' }}>
+                                {userProfile?.role === 'admin' ? 'ADMIN MASTER' : 'PRO MEMBER'}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -89,15 +162,55 @@ export default function Settings() {
                                 <label style={labelStyle}>Nombre de Usuario</label>
                                 <div style={{ position: 'relative' }}>
                                     <IconWrap><User size={20} /></IconWrap>
-                                    <input type="text" style={iconInputStyle} defaultValue="Wuisem" onFocus={focusInput} onBlur={blurInput} />
+                                    <input
+                                        type="text"
+                                        name="displayName"
+                                        style={iconInputStyle}
+                                        value={formData.displayName}
+                                        onChange={handleChange}
+                                        onFocus={focusInput}
+                                        onBlur={blurInput}
+                                    />
                                 </div>
                             </div>
                             <div>
                                 <label style={labelStyle}>E-mail</label>
                                 <div style={{ position: 'relative' }}>
                                     <IconWrap><Mail size={20} /></IconWrap>
-                                    <input type="email" style={iconInputStyle} defaultValue="wuisem051@gmail.com" onFocus={focusInput} onBlur={blurInput} />
+                                    <input
+                                        type="email"
+                                        style={{ ...iconInputStyle, opacity: 0.7, cursor: 'not-allowed' }}
+                                        value={formData.email}
+                                        disabled
+                                    />
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Earnings Preferences */}
+                    <div style={{ ...card, border: '2px solid rgba(0,160,233,0.1)' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 900, marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <SettingsIcon size={22} color="var(--accent-secondary)" /> Preferencias de Ganancias
+                        </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fa', padding: '1.5rem', borderRadius: '1.5rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <p style={{ fontWeight: 900, fontSize: '0.9rem', marginBottom: '4px' }}>Extensión de FastAds</p>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', lineHeight: 1.4 }}>
+                                    Activa esta opción para recibir anuncios automáticos y ganar dinero mientras navegas.
+                                </p>
+                            </div>
+                            <div
+                                onClick={handleToggle}
+                                style={{
+                                    cursor: 'pointer',
+                                    color: formData.extensionEarningsEnabled ? 'var(--accent-secondary)' : 'var(--text-dim)',
+                                    transition: 'color 0.2s',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                {formData.extensionEarningsEnabled ? <ToggleRight size={48} /> : <ToggleLeft size={48} />}
                             </div>
                         </div>
                     </div>
@@ -110,44 +223,77 @@ export default function Settings() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
                             <div>
                                 <label style={labelStyle}>USDT — Dirección TRC20</label>
-                                <input type="text" style={inputStyle} placeholder="TXxx..." onFocus={focusInput} onBlur={blurInput} />
+                                <input
+                                    type="text"
+                                    name="usdt_address"
+                                    style={inputStyle}
+                                    placeholder="TXxx..."
+                                    value={formData.usdt_address}
+                                    onChange={handleChange}
+                                    onFocus={focusInput}
+                                    onBlur={blurInput}
+                                />
                             </div>
                             <div>
                                 <label style={labelStyle}>Dirección Litecoin (LTC)</label>
-                                <input type="text" style={inputStyle} placeholder="L..." onFocus={focusInput} onBlur={blurInput} />
+                                <input
+                                    type="text"
+                                    name="ltc_address"
+                                    style={inputStyle}
+                                    placeholder="L..."
+                                    value={formData.ltc_address}
+                                    onChange={handleChange}
+                                    onFocus={focusInput}
+                                    onBlur={blurInput}
+                                />
                             </div>
                             <div>
                                 <label style={labelStyle}>Dirección Dogecoin (DOGE)</label>
-                                <input type="text" style={inputStyle} placeholder="D..." onFocus={focusInput} onBlur={blurInput} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Security */}
-                    <div style={card}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 900, marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <Lock size={22} color="var(--accent-secondary)" /> Seguridad de Cuenta
-                        </h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            <div>
-                                <label style={labelStyle}>Nueva Contraseña</label>
-                                <input type="password" style={inputStyle} placeholder="••••••••" onFocus={focusInput} onBlur={blurInput} />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Repetir Contraseña</label>
-                                <input type="password" style={inputStyle} placeholder="••••••••" onFocus={focusInput} onBlur={blurInput} />
+                                <input
+                                    type="text"
+                                    name="doge_address"
+                                    style={inputStyle}
+                                    placeholder="D..."
+                                    value={formData.doge_address}
+                                    onChange={handleChange}
+                                    onFocus={focusInput}
+                                    onBlur={blurInput}
+                                />
                             </div>
                         </div>
                     </div>
 
                     {/* Save Button */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="gradient-btn" style={{ padding: '1.25rem 3rem', borderRadius: '1.25rem', fontSize: '1rem', fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 8px 24px rgba(0,160,233,0.25)' }}>
-                            <Save size={22} /> Guardar Configuración
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1.5rem' }}>
+                        {success && (
+                            <span style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <CheckCircle2 size={18} /> ¡Cambios guardados con éxito!
+                            </span>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="gradient-btn"
+                            style={{
+                                padding: '1.25rem 3rem',
+                                borderRadius: '1.25rem',
+                                fontSize: '1rem',
+                                fontWeight: 900,
+                                letterSpacing: '0.06em',
+                                textTransform: 'uppercase',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                boxShadow: '0 8px 24px rgba(0,160,233,0.25)',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                opacity: loading ? 0.7 : 1
+                            }}
+                        >
+                            <Save size={22} /> {loading ? 'Guardando...' : 'Guardar Configuración'}
                         </button>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
     );
 }
