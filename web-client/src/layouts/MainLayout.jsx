@@ -523,6 +523,8 @@ export default function MainLayout({ children }) {
                                                     key={index}
                                                     onClick={async () => {
                                                         if (item.isLogout) {
+                                                            // Notify extension to clear state
+                                                            window.postMessage({ type: 'LOGOUT_USER' }, '*');
                                                             await logout();
                                                             navigate('/login');
                                                         } else {

@@ -35,6 +35,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.local.set({ enabled: message.enabled });
     }
 
+    if (message.type === 'LOGOUT_USER') {
+        userState = {
+            uid: null,
+            balance: 0.0,
+            points: 0,
+            adsViewed: 0,
+            enabled: true,
+            displayName: '',
+            photoURL: ''
+        };
+        chrome.storage.local.set(userState);
+        chrome.runtime.sendMessage({ type: 'UPDATE_UI', data: userState });
+    }
+
     if (message.type === 'SYNC_USER_DATA') {
         const payload = message.payload || {};
 
