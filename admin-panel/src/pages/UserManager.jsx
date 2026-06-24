@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2, Globe } from 'lucide-react';
-import { collection, updateDoc, doc, increment, writeBatch, onSnapshot } from 'firebase/firestore';
+import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2, Globe, Trash2 } from 'lucide-react';
+import { collection, updateDoc, doc, increment, writeBatch, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const cardStyle = {
@@ -291,6 +291,22 @@ export default function UserManager() {
                                                 title={user.status === 'Banned' ? 'Restaurar' : 'Banear'}
                                             >
                                                 {user.status === 'Banned' ? <CheckCircle2 size={18} /> : <Ban size={18} />}
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm(`¿ELIMINAR DEFINITIVAMENTE a ${user.name || user.email}? Esta acción no se puede deshacer.`)) return;
+                                                    try {
+                                                        await deleteDoc(doc(db, 'users', user.id));
+                                                        alert("Usuario eliminado correctamente.");
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                        alert("Error al eliminar usuario.");
+                                                    }
+                                                }}
+                                                style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #fee2e2', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: '#ef4444' }}
+                                                title="Eliminar Usuario"
+                                            >
+                                                <Trash2 size={18} />
                                             </button>
                                         </div>
                                     </td>
