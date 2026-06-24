@@ -6,7 +6,7 @@ import {
     onAuthStateChanged,
     updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 const AuthContext = createContext(null);
@@ -89,13 +89,32 @@ export const AuthProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        const unsub = onAuthStateChanged(auth, async (user) => {
+        let unsubProfile = () => { };
+
+        const unsubAuth = onAuthStateChanged(auth, async (user) => {
             setCurrentUser(user);
-            if (user) await fetchProfile(user.uid, user);
-            else setUserProfile(null);
+
+            if (user) {
+                // Real-time listener for profile
+                unsubProfile = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+                    if (snap.exists()) {
+                        setUserProfile(snap.data());
+                    } else {
+                        // Fallback: create profile if missing
+                        fetchProfile(user.uid, user);
+                    }
+                });
+            } else {
+                setUserProfile(null);
+                unsubProfile();
+            }
             setLoading(false);
         });
-        return unsub;
+
+        return () => {
+            unsubAuth();
+            unsubProfile();
+        };
     }, []);
 
     const value = { currentUser, userProfile, register, login, logout, fetchProfile };
