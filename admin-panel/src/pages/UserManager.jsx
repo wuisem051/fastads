@@ -61,7 +61,9 @@ export default function UserManager() {
                     balance: 0,
                     totalEarnings: 0,
                     adsWatched: 0,
-                    faucetClaims: 0
+                    faucetClaims: 0,
+                    lastFaucetClaim: null,
+                    lastAdView: null
                 });
                 count++;
             });
@@ -249,7 +251,14 @@ export default function UserManager() {
                                                     try {
                                                         const userRef = doc(db, 'users', user.id);
                                                         console.log("Resetting single user:", user.id);
-                                                        await updateDoc(userRef, { balance: 0, totalEarnings: 0, adsWatched: 0, faucetClaims: 0 });
+                                                        await updateDoc(userRef, {
+                                                            balance: 0,
+                                                            totalEarnings: 0,
+                                                            adsWatched: 0,
+                                                            faucetClaims: 0,
+                                                            lastFaucetClaim: null,
+                                                            lastAdView: null
+                                                        });
                                                         alert("Usuario reseteado.");
                                                         fetchUsers();
                                                     } catch (e) { console.error(e); alert("Error al resetear individualmente."); }
