@@ -310,7 +310,7 @@ export default function MainLayout({ children }) {
                 setIsExtensionActive(true);
 
                 if (event.data.type === 'EXTENSION_READY' && userProfile && currentUser) {
-                    // Sync our truth to extension
+                    // Sync our truth TO extension. DB is the master.
                     window.postMessage({
                         type: 'USER_DATA_SYNC',
                         payload: {
@@ -322,38 +322,6 @@ export default function MainLayout({ children }) {
                             adsViewed: userProfile.adsWatched || 0
                         }
                     }, '*');
-
-                    // If extension has MORE balance than us, it means some ads were watched while offline/background
-                    // We reconcile if the difference is positive.
-                    const extBalance = parseFloat(event.data.localBalance || 0);
-                    const dbBalance = parseFloat(userProfile.balance || 0);
-
-                    if (extBalance > dbBalance + 0.00001) { // Use epsilon for float comparison
-                        const diff = extBalance - dbBalance;
-                        console.log(`Reconciliando saldo: Extensión tiene $${extBalance}, DB tiene $${dbBalance}. Diferencia: $${diff}`);
-                        try {
-                            const userRef = doc(db, 'users', currentUser.uid);
-                            await updateDoc(userRef, {
-                                balance: increment(diff),
-                                totalEarnings: increment(diff)
-                            });
-                            await addDoc(collection(db, 'transactions'), {
-                                userId: currentUser.uid,
-                                type: 'ad_view',
-                                amount: diff,
-                                description: 'Sincronización de ganancias (Extensión)',
-                                platform: 'EXTENSION_SYNC',
-                                createdAt: serverTimestamp()
-                            });
-                            // No reload here to avoid loops, just let the snapshot update or reload once
-                            window.location.reload();
-                        } catch (e) {
-                            console.error("Error síncrono:", e);
-                            if (e.code === 'permission-denied') {
-                                alert("Error perm: No tienes permisos para actualizar tu saldo en Firebase.");
-                            }
-                        }
-                    }
                 }
             }
 
