@@ -22,17 +22,17 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
 
-const menuItems = [
-    { icon: <Home size={20} />, label: 'Dashboard', path: '/dashboard' },
-    { icon: <TrendingUp size={20} />, label: 'Ganancias', path: '/earnings' },
-    { icon: <Wallet size={20} />, label: 'Retiros', path: '/withdrawals' },
-    { icon: <Users size={20} />, label: 'Referidos', path: '/referrals' },
-    { icon: <Droplet size={20} />, label: 'Grifo', path: '/faucet' },
-    { icon: <Bell size={20} />, label: 'Noticias', path: '/news' },
-    { icon: <SettingsIcon size={20} />, label: 'Ajustes', path: '/settings' },
-];
+const Sidebar = ({ brand, faucetReady }) => {
+    const menuItems = [
+        { icon: <Home size={20} />, label: 'Dashboard', path: '/dashboard' },
+        { icon: <TrendingUp size={20} />, label: 'Ganancias', path: '/earnings' },
+        { icon: <Wallet size={20} />, label: 'Retiros', path: '/withdrawals' },
+        { icon: <Users size={20} />, label: 'Referidos', path: '/referrals' },
+        { icon: <Droplet size={20} />, label: 'Grifo', path: '/faucet', badge: faucetReady ? '1' : null },
+        { icon: <Bell size={20} />, label: 'Noticias', path: '/news' },
+        { icon: <SettingsIcon size={20} />, label: 'Ajustes', path: '/settings' },
+    ];
 
-const Sidebar = ({ brand }) => {
     return (
         <aside style={{
             width: '16rem',
@@ -92,11 +92,23 @@ const Sidebar = ({ brand }) => {
                     >
                         {item.icon}
                         <span>{item.label}</span>
+                        {item.badge && (
+                            <span style={{
+                                marginLeft: 'auto',
+                                background: '#ef4444',
+                                color: '#fff',
+                                fontSize: '9px',
+                                fontWeight: 900,
+                                padding: '2px 6px',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)'
+                            }}>
+                                {item.badge}
+                            </span>
+                        )}
                     </NavLink>
                 ))}
             </nav>
-
-            {/* Balance removed per user request */}
         </aside>
     );
 };
@@ -110,23 +122,22 @@ export default function MainLayout({ children }) {
     const [isExtensionActive, setIsExtensionActive] = useState(false);
     const [lastExtensionPing, setLastExtensionPing] = useState(0);
     const [showExtMissingMessage, setShowExtMissingMessage] = useState(false);
-    const [brand, setBrand] = useState({ name: 'FASTADS', logo: logoImg });
-    const [extensionUrl, setExtensionUrl] = useState('');
+    const [brand, setBrand] = useState({ name: 'FastAds', logo: logoImg });
+    const [extensionUrl, setExtensionUrl] = useState('https://google.com');
+    const [faucetReady, setFaucetReady] = useState(false);
+    const [faucetConfig, setFaucetConfig] = useState(null);
 
     // Sync branding + SEO with Firestore (real-time)
     useEffect(() => {
-        const unsub = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
+        const unsubBrand = onSnapshot(doc(db, 'settings', 'general'), (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
-                // Update branding
                 setBrand({
                     name: data.brandName || 'FASTADS',
                     logo: data.brandLogo || logoImg
                 });
                 setExtensionUrl(data.extensionUrl || '');
-                // Update SEO title
                 if (data.seoTitle) document.title = data.seoTitle;
-                // Update SEO meta description
                 if (data.seoDescription) {
                     let metaDesc = document.querySelector('meta[name="description"]');
                     if (!metaDesc) {
@@ -138,8 +149,42 @@ export default function MainLayout({ children }) {
                 }
             }
         });
-        return () => unsub();
+        // Fetch Faucet Config
+        const unsubFaucet = onSnapshot(doc(db, 'config', 'faucet'), (snap) => {
+            if (snap.exists()) setFaucetConfig(snap.data());
+        });
+
+        return () => {
+            unsubBrand();
+            unsubFaucet();
+        };
     }, []);
+
+    // Faucet Readiness Check
+    useEffect(() => {
+        if (!faucetConfig || !userProfile) {
+            setFaucetReady(false);
+            return;
+        }
+
+        const checkFaucet = () => {
+            const lastClaim = userProfile.lastFaucetClaim;
+            if (!lastClaim) {
+                setFaucetReady(true);
+                return;
+            }
+
+            const cooldownMin = parseInt(faucetConfig.cooldown || 5);
+            const elapsedMs = Date.now() - lastClaim.toMillis();
+            const elapsedMin = elapsedMs / (1000 * 60);
+
+            setFaucetReady(elapsedMin >= cooldownMin);
+        };
+
+        checkFaucet();
+        const interval = setInterval(checkFaucet, 30000); // Check every 30s
+        return () => clearInterval(interval);
+    }, [faucetConfig, userProfile]);
 
     // Check extension activity periodically
     useEffect(() => {
@@ -200,9 +245,14 @@ export default function MainLayout({ children }) {
                 const filtered = allAds.filter(ad => {
                     if (ad.maxViews && (ad.clicks || 0) >= ad.maxViews) return false;
                     const lastView = userHistory.filter(h => h.adId === ad.id).sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))[0];
+
                     if (lastView && lastView.createdAt) {
+                        const totalPeriodHours = ad.cooldown || 24;
+                        const clicksPerPeriod = ad.clicksPerPeriod || 1; // Number of times it should show in that period
+                        const intervalHours = totalPeriodHours / clicksPerPeriod;
+
                         const hoursSince = (Date.now() - lastView.createdAt.toMillis()) / (1000 * 60 * 60);
-                        if (hoursSince < (ad.cooldown || 24)) return false;
+                        if (hoursSince < intervalHours) return false;
                     }
                     return true;
                 });
@@ -334,7 +384,7 @@ export default function MainLayout({ children }) {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f4f6f7' }}>
-            <Sidebar brand={brand} />
+            <Sidebar brand={brand} faucetReady={faucetReady} />
 
             <main style={{ marginLeft: '16rem', minHeight: '100vh' }}>
                 {/* Header */}

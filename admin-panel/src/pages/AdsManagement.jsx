@@ -46,7 +46,8 @@ export default function AdsManagement() {
         reward: '',
         timer: '',
         maxViews: '',
-        cooldown: '24'
+        cooldown: '24',
+        clicksPerPeriod: '1'
     });
 
     // Banner Campaigns
@@ -110,7 +111,8 @@ export default function AdsManagement() {
             reward: ad.reward || '',
             timer: ad.timer || '',
             maxViews: ad.maxViews || '',
-            cooldown: ad.cooldown || '24'
+            cooldown: ad.cooldown || '24',
+            clicksPerPeriod: ad.clicksPerPeriod || '1'
         });
         setEditingId(ad.id);
         setShowModal(true);
@@ -128,6 +130,7 @@ export default function AdsManagement() {
                 timer: parseInt(form.timer),
                 maxViews: parseInt(form.maxViews) || 1000,
                 cooldown: parseInt(form.cooldown) || 24,
+                clicksPerPeriod: parseInt(form.clicksPerPeriod) || 1,
             };
 
             if (editingId) {
@@ -516,14 +519,18 @@ export default function AdsManagement() {
                                     <input value={form.timer} onChange={e => setForm({ ...form, timer: e.target.value })} required type="number" placeholder="15" style={inputModalStyle} />
                                 </div>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Límite de Clics Totales</label>
+                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Límite Total</label>
                                     <input value={form.maxViews} onChange={e => setForm({ ...form, maxViews: e.target.value })} required type="number" placeholder="Ej: 1000" style={inputModalStyle} />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Frecuencia (Horas)</label>
+                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Periodo (Horas)</label>
                                     <input value={form.cooldown} onChange={e => setForm({ ...form, cooldown: e.target.value })} required type="number" placeholder="Ej: 24" style={inputModalStyle} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    <label style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Clics en Periodo</label>
+                                    <input value={form.clicksPerPeriod} onChange={e => setForm({ ...form, clicksPerPeriod: e.target.value })} required type="number" placeholder="Ej: 5" style={inputModalStyle} />
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.5rem' }}>

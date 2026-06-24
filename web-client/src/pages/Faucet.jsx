@@ -221,19 +221,25 @@ export default function Faucet() {
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        style={{ background: 'var(--header-bg)', borderRadius: '2rem', padding: '2rem', color: '#fff' }}
+                        style={{
+                            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                            borderRadius: '2rem',
+                            padding: '2.5rem',
+                            color: '#fff',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+                        }}
                     >
-                        <h4 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.6)' }}>Información</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <CheckCircle2 size={20} color="var(--accent-secondary)" style={{ flexShrink: 0 }} />
-                                <p style={{ fontSize: '0.85rem', lineHeight: 1.4, opacity: 0.9 }}>Reclama ilimitadamente siempre que el contador llegue a cero.</p>
-                            </div>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <CheckCircle2 size={20} color="var(--accent-secondary)" style={{ flexShrink: 0 }} />
-                                <p style={{ fontSize: '0.85rem', lineHeight: 1.4, opacity: 0.9 }}>El saldo se acredita instantáneamente a tu cuenta principal.</p>
-                            </div>
-                        </div>
+                        <h4 style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '2.5rem', opacity: 0.6 }}>Información</h4>
+                        <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <li style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                                <CheckCircle2 size={24} color="#00a0e9" style={{ flexShrink: 0 }} />
+                                <span style={{ opacity: 0.9 }}>Reclama ilimitadamente siempre que el contador llegue a cero.</span>
+                            </li>
+                            <li style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                                <CheckCircle2 size={24} color="#00a0e9" style={{ flexShrink: 0 }} />
+                                <span style={{ opacity: 0.9 }}>El saldo se acredita instantáneamente a tu cuenta principal.</span>
+                            </li>
+                        </ul>
                     </motion.div>
 
                     <motion.div
