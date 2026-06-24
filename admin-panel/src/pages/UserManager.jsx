@@ -49,22 +49,28 @@ export default function UserManager() {
     }, []);
 
     const resetAllUsers = async () => {
-        if (!confirm("¿ESTÁS SEGURO? Esto pondrá el balance y las visitas de TODOS los usuarios a 0. Esta acción es irreversible.")) return;
+        if (!confirm("¿ESTÁS SEGURO? Esto pondrá el balance, visitas y reclamos de TODOS los usuarios a 0. Esta acción es irreversible.")) return;
         setIsResetting(true);
         try {
-            const promises = users.map(user =>
-                updateDoc(doc(db, 'users', user.id), {
+            const { writeBatch } = await import('firebase/firestore');
+            const batch = writeBatch(db);
+
+            users.forEach(user => {
+                const userRef = doc(db, 'users', user.id);
+                batch.update(userRef, {
                     balance: 0,
                     totalEarnings: 0,
-                    adsWatched: 0
-                })
-            );
-            await Promise.all(promises);
+                    adsWatched: 0,
+                    faucetClaims: 0
+                });
+            });
+
+            await batch.commit();
             alert("Sistema reiniciado con éxito.");
             fetchUsers();
         } catch (error) {
             console.error("Error resetting system:", error);
-            alert("Fallo al reiniciar. Revisa la consola.");
+            alert("Fallo al reiniciar. Es posible que tengas demasiados usuarios para un solo proceso.");
         } finally {
             setIsResetting(false);
         }
