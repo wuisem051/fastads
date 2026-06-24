@@ -14,8 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (balanceEl) balanceEl.textContent = `$${(data.balance || 0).toFixed(4)}`;
         if (teasersViewedEl) teasersViewedEl.textContent = data.adsViewed || 0;
         if (popupsViewedEl) popupsViewedEl.textContent = data.popupsViewed || 0;
-        if (data.displayName && nameEl) nameEl.textContent = data.displayName;
-        if (data.photoURL && avatarEl) avatarEl.src = data.photoURL;
+
+        if (nameEl) {
+            nameEl.textContent = data.uid ? (data.displayName || 'Usuario') : 'Sin sesión activa';
+        }
+
+        if (avatarEl) {
+            if (data.uid && data.photoURL) {
+                avatarEl.src = data.photoURL;
+            } else {
+                avatarEl.src = `https://ui-avatars.com/api/?name=${data.uid ? 'U' : '?'}&background=64748b&color=fff`;
+            }
+        }
     }
 
     chrome.storage.local.get(['balance', 'adsViewed', 'enabled', 'displayName', 'photoURL', 'popupsViewed'], (data) => {

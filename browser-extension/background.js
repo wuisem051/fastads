@@ -64,8 +64,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             };
         } else {
             // Same user, just update values
-            userState.balance = payload.balance || 0;
-            userState.adsViewed = payload.adsViewed || 0;
+            userState.balance = payload.balance ?? 0;
+            userState.adsViewed = payload.adsViewed ?? 0;
             if (payload.displayName) userState.displayName = payload.displayName;
             if (payload.photoURL) userState.photoURL = payload.photoURL;
         }

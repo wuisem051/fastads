@@ -197,6 +197,10 @@ window.addEventListener('message', (event) => {
             payload: event.data.payload
         });
     }
+
+    if (event.data.type === 'LOGOUT_USER') {
+        chrome.runtime.sendMessage({ type: 'LOGOUT_USER' });
+    }
 });
 
 // Notify the web app that the extension is ready
