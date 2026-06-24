@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2, Globe } from 'lucide-react';
-import { collection, getDocs, updateDoc, doc, increment } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, increment, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const cardStyle = {
@@ -49,11 +49,11 @@ export default function UserManager() {
     }, []);
 
     const resetAllUsers = async () => {
-        if (!confirm("¿ESTÁS SEGURO? Esto pondrá el balance, visitas y reclamos de TODOS los usuarios a 0. Esta acción es irreversible.")) return;
+        if (!confirm("¿ESTÁS SEGURO? Esto pondrá TODO a 0 para TODOS los usuarios. Esta acción es irreversible.")) return;
         setIsResetting(true);
         try {
-            const { writeBatch } = await import('firebase/firestore');
             const batch = writeBatch(db);
+            let count = 0;
 
             users.forEach(user => {
                 const userRef = doc(db, 'users', user.id);
@@ -63,14 +63,15 @@ export default function UserManager() {
                     adsWatched: 0,
                     faucetClaims: 0
                 });
+                count++;
             });
 
             await batch.commit();
-            alert("Sistema reiniciado con éxito.");
-            fetchUsers();
+            alert(`Sistema reiniciado con éxito. Usuarios procesados: ${count}`);
+            await fetchUsers();
         } catch (error) {
             console.error("Error resetting system:", error);
-            alert("Fallo al reiniciar. Es posible que tengas demasiados usuarios para un solo proceso.");
+            alert("Error al reiniciar. Revisa la consola.");
         } finally {
             setIsResetting(false);
         }
