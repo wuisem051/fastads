@@ -27,10 +27,13 @@ export default function UserManager() {
     const [bonusAmount, setBonusAmount] = useState(5.00); // Default bonus
     const [bonusEnabled, setBonusEnabled] = useState(true);
 
+    const [searchTerm, setSearchTerm] = useState('');
+
     const fetchUsers = async () => {
         setLoading(true);
         try {
             const querySnapshot = await getDocs(collection(db, 'users'));
+            console.log("Total users in DB:", querySnapshot.size);
             const usersList = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
@@ -43,6 +46,12 @@ export default function UserManager() {
             setLoading(false);
         }
     };
+
+    const filteredUsers = users.filter(user =>
+        (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     useEffect(() => {
         fetchUsers();
@@ -158,7 +167,13 @@ export default function UserManager() {
                 <div style={{ padding: '2rem', display: 'flex', gap: '1.5rem', borderBottom: '1px solid #f0f2f5' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#f8f9fa', border: '1px solid #e6e9ed', padding: '0.75rem 1.25rem', borderRadius: '1rem', flex: 1 }}>
                         <Search size={18} color="var(--text-dim)" />
-                        <input type="text" placeholder="Buscar por nombre, email o ID de usuario..." style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '0.875rem', width: '100%', fontWeight: 600 }} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre, email o ID de usuario..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '0.875rem', width: '100%', fontWeight: 600 }}
+                        />
                     </div>
                     <button onClick={fetchUsers} style={{ padding: '0 2rem', borderRadius: '1rem', background: '#fff', border: '1px solid #e6e9ed', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-dim)', cursor: 'pointer' }}>Actualizar Lista</button>
                     <button style={{ padding: '0 2rem', borderRadius: '1rem', background: '#fff', border: '1px solid #e6e9ed', fontWeight: 900, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-dim)', cursor: 'pointer' }}>Exportar CSV</button>
@@ -179,9 +194,9 @@ export default function UserManager() {
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>Cargando usuarios reales...</td></tr>
-                            ) : users.length === 0 ? (
-                                <tr><td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>No hay usuarios en la base de datos yet</td></tr>
-                            ) : users.map((user, i) => (
+                            ) : filteredUsers.length === 0 ? (
+                                <tr><td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-dim)' }}>No se encontraron usuarios para tu búsqueda</td></tr>
+                            ) : filteredUsers.map((user, i) => (
                                 <tr key={user.id} style={{ borderBottom: i === users.length - 1 ? 'none' : '1px solid #f9fafb' }}>
                                     <td style={{ padding: '1.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
