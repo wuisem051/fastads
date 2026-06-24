@@ -1,6 +1,7 @@
 // AdShare Background Service Worker - Countdown & Badge Update
 
 let userState = {
+    uid: null,
     balance: 0.0,
     points: 0,
     adsViewed: 0,
@@ -14,7 +15,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // Load initial state from storage
-chrome.storage.local.get(['balance', 'points', 'adsViewed', 'enabled'], (data) => {
+chrome.storage.local.get(['uid', 'balance', 'points', 'adsViewed', 'enabled', 'displayName', 'photoURL'], (data) => {
     userState = { ...userState, ...data };
 });
 
@@ -36,11 +37,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === 'SYNC_USER_DATA') {
         const payload = message.payload || {};
-        userState.balance = Math.max(userState.balance || 0, payload.balance || 0);
-        userState.adsViewed = Math.max(userState.adsViewed || 0, payload.adsViewed || 0);
-        if (payload.displayName) userState.displayName = payload.displayName;
-        if (payload.photoURL) userState.photoURL = payload.photoURL;
+
+        // If UID exists and is different, we overwrite everything for the new user
+        if (payload.uid && userState.uid !== payload.uid) {
+            userState = {
+                ...userState,
+                uid: payload.uid,
+                balance: payload.balance || 0,
+                adsViewed: payload.adsViewed || 0,
+                displayName: payload.displayName || '',
+                photoURL: payload.photoURL || ''
+            };
+        } else {
+            // Same user, just update values
+            userState.balance = payload.balance || 0;
+            userState.adsViewed = payload.adsViewed || 0;
+            if (payload.displayName) userState.displayName = payload.displayName;
+            if (payload.photoURL) userState.photoURL = payload.photoURL;
+        }
+
         chrome.storage.local.set(userState);
+        // Refresh popup if it's open
+        chrome.runtime.sendMessage({ type: 'UPDATE_UI', data: userState });
     }
 
     if (message.type === 'SIMULATE_AD') {
