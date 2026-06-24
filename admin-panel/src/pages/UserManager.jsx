@@ -29,22 +29,27 @@ export default function UserManager() {
 
     const [searchTerm, setSearchTerm] = useState('');
 
-    const fetchUsers = async () => {
+    useEffect(() => {
         setLoading(true);
-        try {
-            const querySnapshot = await getDocs(collection(db, 'users'));
-            console.log("Total users in DB:", querySnapshot.size);
-            const usersList = querySnapshot.docs.map(doc => ({
+        const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+            console.log("Sincronización en tiempo real: ", snapshot.size, "usuarios");
+            const usersList = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
                 joined: doc.data().createdAt ? new Date(doc.data().createdAt.toMillis()).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'
             }));
             setUsers(usersList);
-        } catch (error) {
-            console.error("Error fetching users: ", error);
-        } finally {
             setLoading(false);
-        }
+        }, (error) => {
+            console.error("Error en tiempo real:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const fetchUsers = () => {
+        console.log("Actualización manual solicitada (aunque ya es tiempo real)");
     };
 
     const filteredUsers = users.filter(user =>
@@ -53,20 +58,17 @@ export default function UserManager() {
         user.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
 
     const resetAllUsers = async () => {
         if (!confirm("¿ESTÁS SEGURO? Esto pondrá TODO a 0 para TODOS los usuarios. Esta acción es irreversible.")) return;
         setIsResetting(true);
         try {
-            const batch = writeBatch(db);
-            let count = 0;
+            console.log("Iniciando reset masivo para", users.length, "usuarios");
 
-            users.forEach(user => {
+            const promises = users.map(async (user) => {
                 const userRef = doc(db, 'users', user.id);
-                batch.update(userRef, {
+                console.log("Reseteando usuario:", user.id, user.email);
+                return updateDoc(userRef, {
                     balance: 0,
                     totalEarnings: 0,
                     adsWatched: 0,
@@ -74,15 +76,15 @@ export default function UserManager() {
                     lastFaucetClaim: null,
                     lastAdView: null
                 });
-                count++;
             });
 
-            await batch.commit();
-            alert(`Sistema reiniciado con éxito. Usuarios procesados: ${count}`);
-            await fetchUsers();
+            await Promise.all(promises);
+            console.log("Reset masivo completado con éxito");
+            alert(`Sistema reiniciado con éxito. Usuarios procesados: ${users.length}`);
+            fetchUsers();
         } catch (error) {
-            console.error("Error resetting system:", error);
-            alert("Error al reiniciar. Revisa la consola.");
+            console.error("Error crítico en reset masivo:", error);
+            alert("Error al reiniciar. Revisa la consola para más detalles.");
         } finally {
             setIsResetting(false);
         }
