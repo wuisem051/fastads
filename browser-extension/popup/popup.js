@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const nameEl = document.getElementById('user-name');
     const avatarEl = document.getElementById('user-avatar');
 
-    // Load state from extension storage
     function updateUI(data) {
         if (balanceEl) balanceEl.textContent = `$${(data.balance || 0).toFixed(4)}`;
         if (teasersViewedEl) teasersViewedEl.textContent = data.adsViewed || 0;
@@ -22,23 +21,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (avatarEl) {
             if (data.uid && data.photoURL) {
                 avatarEl.src = data.photoURL;
+            } else if (data.uid && data.displayName) {
+                avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=00a0e9&color=fff`;
             } else {
-                avatarEl.src = `https://ui-avatars.com/api/?name=${data.uid ? 'U' : '?'}&background=64748b&color=fff`;
+                avatarEl.src = `https://ui-avatars.com/api/?name=?&background=64748b&color=fff`;
             }
         }
     }
 
-    chrome.storage.local.get(['balance', 'adsViewed', 'enabled', 'displayName', 'photoURL', 'popupsViewed'], (data) => {
-        updateUI(data);
-        const isEnabled = data.enabled !== false;
-        if (adToggle) adToggle.checked = isEnabled;
-        updateToggleText(isEnabled);
-    });
+    // Read uid + all fields on popup open
+    const loadFromStorage = () => {
+        chrome.storage.local.get(['uid', 'balance', 'adsViewed', 'enabled', 'displayName', 'photoURL', 'popupsViewed'], (data) => {
+            updateUI(data);
+            const isEnabled = data.enabled !== false;
+            if (adToggle) adToggle.checked = isEnabled;
+            updateToggleText(isEnabled);
+        });
+    };
+    loadFromStorage();
 
-    // Listen for updates from background
+    // Poll every second so popup refreshes as soon as background receives sync from web
+    const storagePoller = setInterval(loadFromStorage, 1000);
+    window.addEventListener('unload', () => clearInterval(storagePoller));
+
+    // Reactively update whenever background fires UPDATE_UI
     chrome.runtime.onMessage.addListener((message) => {
         if (message.type === 'UPDATE_UI') {
             updateUI(message.data);
+            const isEnabled = message.data.enabled !== false;
+            if (adToggle) adToggle.checked = isEnabled;
+            updateToggleText(isEnabled);
         }
     });
 
