@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Users, Shield, ShieldAlert, History, Mail, DollarSign, Ban, Search, CheckCircle2, Globe } from 'lucide-react';
-import { collection, getDocs, updateDoc, doc, increment, writeBatch } from 'firebase/firestore';
+import { collection, updateDoc, doc, increment, writeBatch, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const cardStyle = {
