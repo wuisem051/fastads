@@ -421,14 +421,8 @@ export default function MainLayout({ children }) {
                         {/* Balances */}
                         <div style={{ display: 'flex', gap: '1.5rem', paddingRight: '2rem', borderRight: '1px solid #f0f2f5' }}>
                             <div style={{ textAlign: 'center' }}>
-                                <p style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-dim)', marginBottom: '4px' }}>BALANCE & ACTIVIDAD</p>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#22c55e' }}>$ {Number(userProfile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 3 })} USD</h3>
-                                <p style={{ fontSize: '10px', color: 'var(--text-dim)', fontWeight: 700, marginTop: '4px' }}>
-                                    {userProfile?.referrals || 0} REFERIDOS • CODE: <span style={{ color: 'var(--accent-secondary)' }}>{userProfile?.referralCode}</span>
-                                </p>
-                                <p style={{ fontSize: '10px', color: '#6366f1', fontWeight: 900, marginTop: '4px', textTransform: 'uppercase' }}>
-                                    {userProfile?.faucetClaims || 0} RECLAMOS GRIFO
-                                </p>
+                                <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '3px' }}>BALANCE</p>
+                                <p className="font-digital" style={{ fontSize: '0.85rem', color: 'var(--accent-secondary)' }}>$ {Number(userProfile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 4 })}</p>
                             </div>
                         </div>
 
