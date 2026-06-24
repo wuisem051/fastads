@@ -205,7 +205,7 @@ export default function UserManager() {
                                         </p>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.04em' }}>
-                                                {users.filter(u => u.referredBy === user.id).length} REFERIDOS
+                                                {users.filter(u => u.referredBy === user.id).length} REFERIDOS • {user.faucetClaims || 0} RECLAMOS GRIFO
                                             </p>
                                             <span style={{ fontSize: '9px', padding: '2px 6px', background: '#fef3c7', color: '#92400e', borderRadius: '4px', fontWeight: 900 }}>CODE: {user.referralCode}</span>
                                         </div>

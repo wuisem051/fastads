@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Plus, Trash2, Edit3, Globe, Eye, MousePointer2, Clock, CheckCircle, XCircle, Search, Filter, Image, Code } from 'lucide-react';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const cardStyle = {
@@ -64,6 +64,12 @@ export default function AdsManagement() {
         cooldown: '24'
     });
 
+    // Click History Modal
+    const [showClicksModal, setShowClicksModal] = useState(false);
+    const [clickLogs, setClickLogs] = useState([]);
+    const [loadingLogs, setLoadingLogs] = useState(false);
+    const [selectedAdTitle, setSelectedAdTitle] = useState('');
+
     // Fetch URL ads
     useEffect(() => {
         const fetchAds = async () => {
@@ -95,6 +101,22 @@ export default function AdsManagement() {
         };
         fetchBannerAds();
     }, []);
+
+    // Fetch Clicks
+    const fetchClickLogs = async (adId, title) => {
+        setLoadingLogs(true);
+        setSelectedAdTitle(title);
+        setShowClicksModal(true);
+        try {
+            const q = query(collection(db, 'transactions'), where('adId', '==', adId), orderBy('createdAt', 'desc'));
+            const snap = await getDocs(q);
+            setClickLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (error) {
+            console.error("Error al obtener logs:", error);
+        } finally {
+            setLoadingLogs(false);
+        }
+    };
 
     // ======= URL Campaigns CRUD =======
     const resetForm = () => {
@@ -376,6 +398,9 @@ export default function AdsManagement() {
                                         </td>
                                         <td style={{ padding: '1.5rem', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                                                <button onClick={() => fetchClickLogs(ad.id, ad.title)} style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-secondary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}>
+                                                    <MousePointer2 size={18} />
+                                                </button>
                                                 <button onClick={() => handleEdit(ad)} style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', border: '1px solid #f0f2f5', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-dim)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-secondary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}>
                                                     <Edit3 size={18} />
                                                 </button>
@@ -595,6 +620,51 @@ export default function AdsManagement() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Click History Modal */}
+            {showClicksModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                    <div style={{ background: '#fff', borderRadius: '2.5rem', width: '100%', maxWidth: '600px', padding: '2.5rem', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', position: 'relative' }}>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>Registro de Clics</h2>
+                        <p style={{ color: 'var(--text-dim)', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2rem' }}>Campaña: {selectedAdTitle}</p>
+
+                        <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '2rem' }}>
+                            {loadingLogs ? (
+                                <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-dim)' }}>Cargando...</p>
+                            ) : clickLogs.length === 0 ? (
+                                <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-dim)' }}>No hay clics registrados aún.</p>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead style={{ position: 'sticky', top: 0, background: '#fff' }}>
+                                        <tr>
+                                            <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)' }}>USUARIO</th>
+                                            <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)' }}>RECOMPENSA</th>
+                                            <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '10px', fontWeight: 900, color: 'var(--text-dim)' }}>FECHA</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {clickLogs.map(log => (
+                                            <tr key={log.id} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                                <td style={{ padding: '0.75rem', fontSize: '0.85rem', fontWeight: 700 }}>{log.userEmail || log.userId}</td>
+                                                <td style={{ padding: '0.75rem', fontSize: '0.85rem', fontWeight: 900, color: '#22c55e' }}>${log.amount}</td>
+                                                <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: 'var(--text-dim)', textAlign: 'right' }}>
+                                                    {log.createdAt?.toMillis() ? new Date(log.createdAt.toMillis()).toLocaleString() : 'N/A'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={() => setShowClicksModal(false)}
+                            style={{ width: '100%', padding: '1.25rem', borderRadius: '1.25rem', background: '#f8f9fa', border: '1px solid #e6e9ed', fontWeight: 900, fontSize: '11px', cursor: 'pointer' }}
+                        >
+                            CERRAR
+                        </button>
                     </div>
                 </div>
             )}

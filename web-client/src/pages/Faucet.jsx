@@ -65,7 +65,8 @@ export default function Faucet() {
             await updateDoc(doc(db, 'users', currentUser.uid), {
                 balance: increment(reward),
                 totalEarnings: increment(reward),
-                lastFaucetClaim: serverTimestamp()
+                lastFaucetClaim: serverTimestamp(),
+                faucetClaims: increment(1)
             });
 
             await addDoc(collection(db, 'transactions'), {
