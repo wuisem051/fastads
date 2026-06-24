@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Mail, User, Lock, CreditCard, Save, ShieldCheck, ToggleLeft, ToggleRight, CheckCircle2 } from 'lucide-react';
+import { Camera, Mail, User, Lock, CreditCard, Save, ShieldCheck, ToggleLeft, ToggleRight, CheckCircle2, Settings as SettingsIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
