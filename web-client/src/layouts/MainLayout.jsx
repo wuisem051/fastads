@@ -14,7 +14,12 @@ import {
     LogOut as LogoutIcon,
     Plus,
     Eye,
-    Droplet
+    Droplet,
+    Download,
+    Inbox,
+    ShieldCheck,
+    ToggleLeft,
+    ToggleRight
 } from 'lucide-react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -28,7 +33,7 @@ const Sidebar = ({ brand, faucetReady }) => {
         { icon: <TrendingUp size={20} />, label: 'Ganancias', path: '/earnings' },
         { icon: <Wallet size={20} />, label: 'Retiros', path: '/withdrawals' },
         { icon: <Users size={20} />, label: 'Referidos', path: '/referrals' },
-        { icon: <Droplet size={20} />, label: 'Grifo', path: '/faucet', badge: faucetReady ? '1' : null },
+        { icon: <Droplet size={20} />, label: 'Grifo', path: '/faucet', badge: faucetReady ? '!' : null },
         { icon: <Bell size={20} />, label: 'Noticias', path: '/news' },
         { icon: <SettingsIcon size={20} />, label: 'Ajustes', path: '/settings' },
     ];
@@ -95,13 +100,18 @@ const Sidebar = ({ brand, faucetReady }) => {
                         {item.badge && (
                             <span style={{
                                 marginLeft: 'auto',
-                                background: '#ef4444',
+                                background: '#f87171',
                                 color: '#fff',
-                                fontSize: '9px',
+                                fontSize: '12px',
                                 fontWeight: 900,
-                                padding: '2px 6px',
-                                borderRadius: '6px',
-                                boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)'
+                                width: '18px',
+                                height: '18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 10px rgba(248, 113, 113, 0.6)',
+                                animation: 'pulse 2s infinite'
                             }}>
                                 {item.badge}
                             </span>

@@ -9,7 +9,10 @@ import {
     TrendingUp,
     Download,
     Inbox,
-    Bell
+    Bell,
+    ShieldCheck,
+    ToggleLeft,
+    ToggleRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc, increment, addDoc, serverTimestamp, getDocs, collection, query, where, orderBy, limit, getDoc } from 'firebase/firestore';
@@ -247,6 +250,53 @@ export default function Dashboard({ extensionUrl }) {
                 <StatCard title="Balance Total" value={formatCurrency(balance)} icon={<DollarSign size={24} />} />
                 <StatCard title="Anuncios Vistos" value={adsWatched} icon={<Eye size={24} />} />
                 <StatCard title="Red de Referidos" value={referrals} icon={<Users size={24} />} />
+            </div>
+
+            {/* Extension Control Bar */}
+            <div style={{
+                background: '#f8fafc',
+                borderRadius: '1.5rem',
+                padding: '1.25rem 2.5rem',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{
+                        padding: '0.875rem',
+                        borderRadius: '1.25rem',
+                        background: userProfile?.extensionEarningsEnabled !== false ? 'rgba(34, 197, 94, 0.1)' : 'rgba(148, 163, 184, 0.1)',
+                        color: userProfile?.extensionEarningsEnabled !== false ? '#22c55e' : '#94a3b8'
+                    }}>
+                        <ShieldCheck size={24} />
+                    </div>
+                    <div>
+                        <p style={{ fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '2px' }}>Protección y Ganancias Automáticas</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 700 }}>
+                            {userProfile?.extensionEarningsEnabled !== false
+                                ? 'La extensión está autorizada para generar ingresos pasivos.'
+                                : 'Las ganancias por extensión están pausadas actualmente.'}
+                        </p>
+                    </div>
+                </div>
+                <div
+                    onClick={async () => {
+                        const state = userProfile?.extensionEarningsEnabled !== false;
+                        await updateDoc(doc(db, 'users', currentUser.uid), {
+                            extensionEarningsEnabled: !state
+                        });
+                    }}
+                    style={{
+                        cursor: 'pointer',
+                        color: userProfile?.extensionEarningsEnabled !== false ? '#22c55e' : '#cbd5e1',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transform: 'scale(1.1)'
+                    }}
+                >
+                    {userProfile?.extensionEarningsEnabled !== false ? <ToggleRight size={52} /> : <ToggleLeft size={52} />}
+                </div>
             </div>
 
             {/* Activity Feed + Promo Banner */}
