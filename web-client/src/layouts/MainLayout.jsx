@@ -110,6 +110,8 @@ export default function MainLayout({ children }) {
     const [isExtensionActive, setIsExtensionActive] = useState(false);
     const [lastExtensionPing, setLastExtensionPing] = useState(0);
     const [showExtMissingMessage, setShowExtMissingMessage] = useState(false);
+    const [brand, setBrand] = useState({ name: 'FASTADS', logo: logoImg });
+    const [extensionUrl, setExtensionUrl] = useState('');
 
     // Sync branding + SEO with Firestore (real-time)
     useEffect(() => {
